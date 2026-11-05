@@ -1,7 +1,7 @@
 """
-app.py - Storyboard-to-GIF Animator — Clean Creator Edition
-=============================================================
-Redesigned UI with Antigravity-inspired "Clean Creator" aesthetic.
+app.py - Storyboard-to-GIF Animator — Clean Creator Edition (Light Theme)
+========================================================================
+Redesigned UI with Antigravity-inspired "Clean Creator" light aesthetic.
 Backend files (safety.py, llm.py, imagegen.py, blip_check.py, video.py) are UNCHANGED.
 All features preserved: idea input, few-shot/zero-shot, seed, advanced settings,
 generate button, gallery, MP4 + GIF, music, BLIP table, JSON viewer, all tabs.
@@ -54,7 +54,7 @@ PRESET_IDEAS = [
 # ---------------------------------------------------------------------------
 
 def make_pipeline_html(active_step: int = -1, done_steps: set = None) -> str:
-    """Renders the 5-step pipeline progress strip."""
+    """Renders the 5-step pipeline progress strip with high-contrast text."""
     if done_steps is None:
         done_steps = set()
     pills = []
@@ -80,16 +80,16 @@ def make_blip_ring_html(score=None) -> str:
     circumference = 2 * math.pi * radius
 
     if score is None:
-        pct, score_str, ring_color, label_color = 0.0, "—", "#E6E8EC", "#9CA3AF"
+        pct, score_str, ring_color, label_color = 0.0, "—", "#E6E8EC", "#6B7280"
     else:
         pct = min(1.0, max(0.0, float(score)))
         score_str = f"{pct:.3f}"
         if pct >= 0.50:
-            ring_color, label_color = "#34D399", "#059669"
+            ring_color, label_color = "#10B981", "#047857"
         elif pct >= 0.35:
-            ring_color, label_color = "#FBBF24", "#D97706"
+            ring_color, label_color = "#F59E0B", "#B45309"
         else:
-            ring_color, label_color = "#F87171", "#DC2626"
+            ring_color, label_color = "#EF4444", "#B91C1C"
 
     dash_offset = circumference * (1 - pct)
 
@@ -110,11 +110,11 @@ def make_blip_ring_html(score=None) -> str:
                 align-items:center;justify-content:center;gap:2px;">
       <span style="font-size:1.85rem;font-weight:700;color:#0B0B0F;
                    letter-spacing:-0.04em;line-height:1;">{score_str}</span>
-      <span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;
+      <span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;
                    letter-spacing:0.08em;color:{label_color};">BLIP</span>
     </div>
   </div>
-  <p style="font-size:0.78rem;color:#6B7280;text-align:center;margin-top:10px;
+  <p style="font-size:0.82rem;color:#3C4043;font-weight:500;text-align:center;margin-top:10px;
              line-height:1.45;max-width:180px;">
     Average semantic alignment (Cosine Similarity)
   </p>
@@ -138,14 +138,12 @@ def _run_pipeline_generator(
     progress=gr.Progress(track_tqdm=True),
 ):
     """
-    Generator that yields partial UI state after each pipeline stage.
+    Generator yielding UI updates after each pipeline stage.
     Outputs (9): pipeline_html, status_md, json_viewer, gallery,
                  eval_table, blip_ring_html, gif_image, video_player, audio_player
     """
-    _EMPTY = (make_pipeline_html(), None, None, None, None, make_blip_ring_html(), None, None, None)
-
     # ── Step 0: Safety ──────────────────────────────────────────────────────
-    yield (make_pipeline_html(0), "🛡️ Checking content safety...",
+    yield (make_pipeline_html(0), "🛡️ **Checking content safety guardrails...**",
            None, None, None, make_blip_ring_html(), None, None, None)
 
     is_safe, safety_msg, _ = check_safety(idea)
@@ -157,7 +155,7 @@ def _run_pipeline_generator(
 
     # ── Step 1: LLM Storyboard ───────────────────────────────────────────
     yield (make_pipeline_html(1, {0}),
-           f"✍️ Generating `{technique}` storyboard with Gemini…",
+           f"✍️ **Generating `{technique}` storyboard with Gemini...**",
            None, None, None, make_blip_ring_html(), None, None, None)
 
     clean_prefix = style_prefix.strip() or DEFAULT_STYLE_PREFIX
@@ -169,7 +167,7 @@ def _run_pipeline_generator(
 
     # ── Step 2: Frame Generation ─────────────────────────────────────────
     yield (make_pipeline_html(2, {0, 1}),
-           f"🖼️ Generating {len(shots)} frames (seed={seed})…",
+           f"🖼️ **Generating {len(shots)} visual frames (seed={seed})...**",
            storyboard_data, None, None, make_blip_ring_html(), None, None, None)
 
     frames, gen_methods = generate_storyboard_frames(
@@ -180,7 +178,7 @@ def _run_pipeline_generator(
 
     # Show frames immediately while video renders
     yield (make_pipeline_html(3, {0, 1, 2}),
-           "🎬 Rendering cross-fade animation with music…",
+           "🎬 **Rendering cross-fade transitions and merging music...**",
            storyboard_data, frames, None, make_blip_ring_html(), None, None, None)
 
     # ── Step 3: Video ────────────────────────────────────────────────────
@@ -192,7 +190,7 @@ def _run_pipeline_generator(
 
     # ── Step 4: BLIP Quality Check ───────────────────────────────────────
     yield (make_pipeline_html(4, {0, 1, 2, 3}),
-           "🔍 Running BLIP semantic quality check…",
+           "🔍 **Running BLIP multimodal quality verification...**",
            storyboard_data, frames, None, make_blip_ring_html(),
            gif_path, mp4_path, music_path)
 
@@ -204,12 +202,10 @@ def _run_pipeline_generator(
     mismatch_count = sum(1 for d in eval_details if d.get("is_mismatch"))
     engine = gen_methods[0] if gen_methods else "Canvas"
     summary = (
-        f"### 🎉 Storyboard Generated!\n"
-        f"**Technique**: `{technique}` &nbsp;·&nbsp; **Engine**: `{engine}` "
-        f"&nbsp;·&nbsp; **Seed**: `{seed}`  \n"
-        f"**BLIP Score**: `{avg_score:.3f}` &nbsp;·&nbsp; "
-        f"**Flags**: `{mismatch_count}` mismatch(es) (threshold: `{mismatch_threshold}`)  \n"
-        f"*AI-Generated watermark applied to every frame.*"
+        f"### 🎉 Storyboard Generated Successfully!\n"
+        f"- **Technique**: `{technique}` &nbsp;·&nbsp; **Engine**: `{engine}` &nbsp;·&nbsp; **Seed**: `{seed}`\n"
+        f"- **Average BLIP Score**: `{avg_score:.3f}` &nbsp;·&nbsp; **Quality Flags**: `{mismatch_count}` potential mismatch(es)\n"
+        f"- **AI Disclosure**: Verified 'AI-Generated' watermark stamped onto all frames."
     )
 
     yield (
@@ -239,433 +235,424 @@ def run_technique_comparison(idea: str, style_prefix: str, api_key_override: str
 
 
 # ---------------------------------------------------------------------------
-# CSS — Clean Creator / Antigravity-inspired light theme
+# CSS — Clean Creator Light Theme with complete Gradio variable overrides
 # ---------------------------------------------------------------------------
 
 CUSTOM_CSS = """
 /* ── Fonts ───────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 
-/* ── Design tokens ───────────────────────────────────── */
-:root {
+/* ── Force Light Theme and Override Gradio Variables ──── */
+:root, html, body, .gradio-container, .dark, .light {
+  color-scheme: light !important;
+  --body-background-fill: #FFFFFF !important;
+  --background-fill-primary: #FFFFFF !important;
+  --background-fill-secondary: #F8F9FA !important;
+  --block-background-fill: #FFFFFF !important;
+  --panel-background-fill: #FFFFFF !important;
+  --input-background-fill: #FFFFFF !important;
+  --button-secondary-background-fill: #F8F9FA !important;
+  --body-text-color: #0B0B0F !important;
+  --block-label-text-color: #0B0B0F !important;
+  --block-title-text-color: #0B0B0F !important;
+  --input-text-color: #0B0B0F !important;
+  --border-color-primary: #E6E8EC !important;
+  --border-color-secondary: #E6E8EC !important;
+  --block-border-color: #E6E8EC !important;
+  --table-border-color: #E6E8EC !important;
+  --button-secondary-text-color: #0B0B0F !important;
+  --button-secondary-border-color: #E6E8EC !important;
+
+  /* Custom palette */
   --white:   #FFFFFF;
   --bg:      #F8F9FA;
   --black:   #0B0B0F;
-  --text:    #1A1A2E;
-  --muted:   #6B7280;
+  --text:    #0B0B0F;
+  --muted:   #4B5563;
   --border:  #E6E8EC;
   --radius-card: 24px;
   --radius-pill: 999px;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
-  --shadow-lg: 0 8px 36px rgba(0,0,0,0.12);
-  /* Pastel palette */
+
+  /* Soft pastels */
   --lavender:      #E8E3FF;
   --lavender-mid:  #C4B5FD;
-  --lavender-dark: #7C3AED;
   --mint:          #DDF5EA;
   --mint-mid:      #86EFAC;
-  --mint-dark:     #15803D;
   --peach:         #FFE8DB;
-  --peach-dark:    #EA580C;
   --sky:           #DCEBFF;
-  --sky-dark:      #2563EB;
   --butter:        #FFF3CC;
-  --butter-dark:   #D97706;
 }
 
-/* ── Gradio global resets ────────────────────────────── */
-.gradio-container {
+/* Hard reset for dark mode overrides */
+.dark, .dark * {
+  --body-background-fill: #FFFFFF !important;
+  --background-fill-primary: #FFFFFF !important;
+  --background-fill-secondary: #F8F9FA !important;
+  --block-background-fill: #FFFFFF !important;
+  --panel-background-fill: #FFFFFF !important;
+  --input-background-fill: #FFFFFF !important;
+  --button-secondary-background-fill: #F8F9FA !important;
+  --body-text-color: #0B0B0F !important;
+  --block-label-text-color: #0B0B0F !important;
+  --block-title-text-color: #0B0B0F !important;
+  --input-text-color: #0B0B0F !important;
+  --border-color-primary: #E6E8EC !important;
+}
+
+body, .gradio-container {
   max-width: 100% !important;
   padding: 0 !important;
   margin: 0 !important;
-  background: var(--white) !important;
+  background-color: #FFFFFF !important;
   font-family: 'DM Sans', Inter, -apple-system, BlinkMacSystemFont, sans-serif !important;
   font-size: 16px !important;
-  color: var(--text) !important;
+  color: #0B0B0F !important;
 }
+
 footer.svelte-1rjryqp { display: none !important; }
 
-/* ── Fixed Nav ───────────────────────────────────────── */
+/* ── Top Bar (Logo & Project Name only) ───────────────── */
 .cc-nav {
   position: fixed;
   top: 0; left: 0; right: 0;
   z-index: 999;
   height: 60px;
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: flex-start;
   padding: 0 36px;
-  background: rgba(255,255,255,0.88);
+  background: rgba(255,255,255,0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
 }
 .cc-nav-brand {
-  font-size: 1.0rem; font-weight: 700; color: var(--black);
-  letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;
+  font-size: 1.05rem; font-weight: 700; color: #0B0B0F !important;
+  letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px;
   text-decoration: none;
 }
-.cc-nav-brand span { font-size: 1.3rem; }
-.cc-nav-links { display: flex; gap: 2px; }
-.cc-nav-links button {
-  background: none; border: none; cursor: pointer;
-  font-size: 0.875rem; font-weight: 500;
-  color: var(--muted); padding: 7px 14px;
-  border-radius: var(--radius-pill);
-  font-family: 'DM Sans', sans-serif;
-  transition: color 0.18s ease, background 0.18s ease;
-}
-.cc-nav-links button:hover { color: var(--black); background: var(--bg); }
-
-/* ── Top spacer (push content below fixed nav) ───────── */
+.cc-nav-brand span { font-size: 1.35rem; }
 .cc-nav-spacer { height: 60px; }
 
 /* ── Hero ────────────────────────────────────────────── */
 .cc-hero {
   position: relative; overflow: hidden;
-  padding: 72px 32px 60px; text-align: center;
+  padding: 64px 32px 48px; text-align: center;
   background: var(--white);
 }
 .cc-hero-inner { position: relative; z-index: 1; }
 .cc-hero-eyebrow {
   display: inline-flex; align-items: center; gap: 6px;
-  background: var(--lavender); color: var(--lavender-dark);
+  background: var(--lavender); color: #3B1B7D !important;
   border-radius: var(--radius-pill); padding: 5px 14px;
   font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase; margin-bottom: 20px;
+  text-transform: uppercase; margin-bottom: 18px;
 }
 .cc-hero-h1 {
   font-size: clamp(2.4rem, 5.5vw, 3.75rem);
-  font-weight: 700; color: var(--black);
-  letter-spacing: -0.035em; line-height: 1.07;
-  margin-bottom: 10px;
+  font-weight: 700; color: #0B0B0F !important;
+  letter-spacing: -0.035em; line-height: 1.08;
+  margin-bottom: 12px;
 }
-.cc-hero-h1 em { color: var(--muted); font-style: normal; }
+.cc-hero-h1 em { color: #5F6368 !important; font-style: normal; }
 .cc-hero-sub {
-  font-size: 1.1rem; color: var(--muted); line-height: 1.65;
-  max-width: 540px; margin: 0 auto 36px; font-weight: 400;
+  font-size: 1.1rem; color: #3C4043 !important; line-height: 1.6;
+  max-width: 580px; margin: 0 auto 28px; font-weight: 400;
 }
 
-/* ── Floating blobs ──────────────────────────────────── */
-.cc-blobs {
-  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
-}
-.cc-blob {
-  position: absolute; border-radius: 50%; filter: blur(72px); opacity: 0.42;
-}
-.cc-blob-1 {
-  width:380px; height:380px; background:var(--lavender);
-  top:-120px; left:-80px;
-  animation: blobA 26s ease-in-out infinite;
-}
-.cc-blob-2 {
-  width:300px; height:300px; background:var(--mint);
-  top:-80px; right:-60px;
-  animation: blobB 22s ease-in-out infinite;
-}
-.cc-blob-3 {
-  width:260px; height:260px; background:var(--peach);
-  bottom:-100px; left:35%;
-  animation: blobC 30s ease-in-out infinite;
-}
-@keyframes blobA {
-  0%,100%{transform:translate(0,0) scale(1)}
-  40%{transform:translate(28px,18px) scale(1.06)}
-  70%{transform:translate(-16px,8px) scale(0.96)}
-}
-@keyframes blobB {
-  0%,100%{transform:translate(0,0) scale(1)}
-  35%{transform:translate(-22px,14px) scale(1.07)}
-  65%{transform:translate(14px,-10px) scale(0.95)}
-}
-@keyframes blobC {
-  0%,100%{transform:translate(0,0) scale(1)}
-  30%{transform:translate(18px,-14px) scale(1.04)}
-  60%{transform:translate(-10px,18px) scale(0.97)}
-}
-
-/* sparkle dots */
-.cc-sparkle {
-  position: absolute; border-radius: 50%; background: var(--lavender-mid);
-  animation: sparkle linear infinite; opacity: 0;
-}
-@keyframes sparkle {
-  0%   { opacity:0; transform:translateY(0) scale(0); }
-  10%  { opacity:0.9; transform:translateY(-8px) scale(1); }
-  85%  { opacity:0.3; transform:translateY(-70px) scale(0.7); }
-  100% { opacity:0; transform:translateY(-90px) scale(0); }
-}
+/* ── Floating blobs (subtle & light) ──────────────────── */
+.cc-blobs { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.cc-blob { position: absolute; border-radius: 50%; filter: blur(72px); opacity: 0.45; }
+.cc-blob-1 { width:380px; height:380px; background:var(--lavender); top:-120px; left:-80px; animation: blobA 26s ease-in-out infinite; }
+.cc-blob-2 { width:300px; height:300px; background:var(--mint); top:-80px; right:-60px; animation: blobB 22s ease-in-out infinite; }
+.cc-blob-3 { width:260px; height:260px; background:var(--peach); bottom:-100px; left:35%; animation: blobC 30s ease-in-out infinite; }
+@keyframes blobA { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(28px,18px) scale(1.06)} }
+@keyframes blobB { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-22px,14px) scale(1.07)} }
+@keyframes blobC { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(18px,-14px) scale(1.04)} }
 
 /* ── Idea input card ─────────────────────────────────── */
 .cc-idea-card {
   max-width: 760px; margin: 0 auto; position: relative; z-index: 1;
 }
 .cc-idea-card textarea {
-  font-size: 1.0625rem !important;
+  font-size: 1.05rem !important;
   font-family: 'DM Sans', sans-serif !important;
   border-radius: 18px !important;
   border: 1.5px solid var(--border) !important;
-  padding: 20px 22px !important;
-  background: var(--white) !important;
-  box-shadow: var(--shadow-md) !important;
-  color: var(--black) !important;
+  padding: 18px 22px !important;
+  background: #FFFFFF !important;
+  box-shadow: var(--shadow-sm) !important;
+  color: #0B0B0F !important;
   line-height: 1.6 !important;
-  transition: border-color 0.2s, box-shadow 0.2s !important;
 }
 .cc-idea-card textarea:focus {
-  border-color: var(--lavender-mid) !important;
-  box-shadow: 0 0 0 4px rgba(196,181,253,0.18), var(--shadow-md) !important;
+  border-color: #0B0B0F !important;
+  box-shadow: 0 0 0 3px rgba(11,11,15,0.08) !important;
   outline: none !important;
+}
+.cc-idea-card label, .cc-idea-card span {
+  color: #0B0B0F !important; font-weight: 600 !important; opacity: 1 !important;
 }
 
 /* ── Preset chips ────────────────────────────────────── */
 .cc-chips {
   display: flex; flex-wrap: wrap; justify-content: center;
-  gap: 8px; margin: 14px auto 0; max-width: 760px;
+  gap: 8px; margin: 12px auto 0; max-width: 760px;
   position: relative; z-index: 1;
 }
 .cc-chip button {
-  background: var(--bg) !important;
-  color: var(--text) !important;
+  background: #FFFFFF !important;
+  color: #1A1A2E !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius-pill) !important;
   padding: 7px 16px !important;
-  font-size: 0.84rem !important; font-weight: 500 !important;
+  font-size: 0.85rem !important; font-weight: 600 !important;
   font-family: 'DM Sans', sans-serif !important;
   cursor: pointer !important; white-space: nowrap !important;
-  box-shadow: none !important;
-  transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s !important;
+  box-shadow: var(--shadow-sm) !important;
+  opacity: 1 !important;
+  transition: all 0.18s ease !important;
 }
 .cc-chip button:hover {
   background: var(--lavender) !important;
   border-color: var(--lavender-mid) !important;
+  color: #0B0B0F !important;
   transform: translateY(-2px) !important;
-  box-shadow: var(--shadow-sm) !important;
 }
-.cc-chip button:active { transform: translateY(0) !important; }
 
-/* ── Generate button ─────────────────────────────────── */
-.cc-gen-btn { max-width: 760px; margin: 14px auto 0; position: relative; z-index: 1; }
+/* ── Advanced Settings bar ───────────────────────────── */
+.cc-advanced-accordion {
+  max-width: 760px; margin: 14px auto 0 !important;
+  background: #FFFFFF !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+}
+.cc-advanced-accordion details {
+  border: none !important;
+  background: #FFFFFF !important;
+}
+.cc-advanced-accordion summary {
+  padding: 12px 20px !important;
+  background: #F8F9FA !important;
+  color: #0B0B0F !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  opacity: 1 !important;
+}
+.cc-advanced-accordion label,
+.cc-advanced-accordion span {
+  color: #0B0B0F !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+.cc-advanced-accordion input,
+.cc-advanced-accordion select,
+.cc-advanced-accordion .gr-input {
+  background: #FFFFFF !important;
+  color: #0B0B0F !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+}
+
+/* ── Generate button (Black Pill) ────────────────────── */
+.cc-gen-btn { max-width: 760px; margin: 16px auto 0; position: relative; z-index: 1; }
 .cc-gen-btn button {
-  background: var(--black) !important;
-  color: var(--white) !important;
+  background: #0B0B0F !important;
+  color: #FFFFFF !important;
   border: none !important;
   border-radius: var(--radius-pill) !important;
   padding: 15px 36px !important;
-  font-size: 1.0625rem !important; font-weight: 600 !important;
+  font-size: 1.05rem !important; font-weight: 600 !important;
   font-family: 'DM Sans', sans-serif !important;
   width: 100% !important; cursor: pointer !important;
   box-shadow: 0 4px 16px rgba(11,11,15,0.22) !important;
   transition: transform 0.18s, box-shadow 0.18s !important;
   letter-spacing: -0.01em !important;
+  opacity: 1 !important;
 }
 .cc-gen-btn button:hover {
-  transform: scale(1.025) !important;
+  transform: scale(1.02) !important;
   box-shadow: 0 6px 24px rgba(11,11,15,0.30) !important;
 }
-.cc-gen-btn button:active { transform: scale(0.99) !important; }
 
 /* ── Section wrapper ─────────────────────────────────── */
 .cc-section {
   max-width: 1200px; margin: 0 auto; padding: 0 32px;
 }
-.cc-section-gap { height: 48px; }
+.cc-section-gap { height: 40px; }
 
-/* ── Tabs ────────────────────────────────────────────── */
+/* ── Tabs (Main Navigation) ──────────────────────────── */
 .gradio-container .tabs > .tab-nav {
-  background: transparent !important;
+  background: #FFFFFF !important;
   border-bottom: 1px solid var(--border) !important;
   padding: 0 32px !important;
 }
 .gradio-container .tabs > .tab-nav button {
   font-family: 'DM Sans', sans-serif !important;
-  font-size: 0.9rem !important; font-weight: 500 !important;
-  color: var(--muted) !important;
-  padding: 14px 18px !important; border-radius: 0 !important;
+  font-size: 0.95rem !important; font-weight: 600 !important;
+  color: #3C4043 !important;
+  opacity: 1 !important;
+  padding: 14px 22px !important; border-radius: 0 !important;
   border-bottom: 2px solid transparent !important;
   background: transparent !important;
   transition: color 0.18s, border-color 0.18s !important;
 }
+.gradio-container .tabs > .tab-nav button:hover {
+  color: #0B0B0F !important;
+}
 .gradio-container .tabs > .tab-nav button.selected,
 .gradio-container .tabs > .tab-nav button[aria-selected="true"] {
-  color: var(--black) !important;
-  border-bottom-color: var(--black) !important;
-  font-weight: 600 !important;
+  color: #0B0B0F !important;
+  border-bottom: 2px solid #0B0B0F !important;
+  font-weight: 700 !important;
 }
 
 /* ── Pipeline progress strip ─────────────────────────── */
 .cc-pipeline {
   display: flex; align-items: center; flex-wrap: wrap;
-  gap: 5px; padding: 20px 0 10px;
+  gap: 6px; padding: 18px 0 10px;
 }
 .cc-pipe-step {
-  display: flex; align-items: center; gap: 5px;
-  padding: 7px 15px; border-radius: var(--radius-pill);
-  font-size: 0.82rem; font-weight: 600; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 18px; border-radius: var(--radius-pill);
+  font-size: 0.85rem; font-weight: 600; white-space: nowrap;
   border: 1.5px solid transparent;
-  transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
+  opacity: 1 !important;
+  transition: all 0.25s ease;
 }
-.cc-pipe-step.idle   { background:var(--bg); color:var(--muted); border-color:var(--border); }
-.cc-pipe-step.active { background:var(--lavender); color:var(--lavender-dark); border-color:var(--lavender-mid); animation:pulsePill 1.6s ease-in-out infinite; }
-.cc-pipe-step.done   { background:var(--mint); color:var(--mint-dark); border-color:var(--mint-mid); }
-.cc-pipe-arrow       { color:var(--border); font-size:1.1rem; flex-shrink:0; }
-.cc-pipe-label       { display:inline; }
-@keyframes pulsePill {
-  0%,100%{opacity:1; transform:scale(1)}
-  50%{opacity:0.72; transform:scale(1.05)}
+.cc-pipe-step.idle   { background: #F8F9FA !important; color: #3C4043 !important; border-color: var(--border) !important; }
+.cc-pipe-step.active { background: var(--lavender) !important; color: #0B0B0F !important; border-color: #A78BFA !important; font-weight: 700 !important; }
+.cc-pipe-step.done   { background: var(--mint) !important; color: #064E3B !important; border-color: #86EFAC !important; font-weight: 700 !important; }
+.cc-pipe-arrow       { color: #6B7280 !important; font-size: 1.2rem; flex-shrink: 0; font-weight: 700; opacity: 1 !important; }
+.cc-pipe-label       { color: inherit !important; opacity: 1 !important; }
+
+/* ── Hint status line ────────────────────────────────── */
+.cc-status-md, .cc-status-md p, .cc-status-md em, .cc-status-md strong {
+  color: #3C4043 !important;
+  font-size: 0.95rem !important;
+  opacity: 1 !important;
+  line-height: 1.5 !important;
 }
 
 /* ── Cards ───────────────────────────────────────────── */
 .cc-card {
-  background: var(--white);
+  background: #FFFFFF !important;
   border-radius: var(--radius-card) !important;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border) !important;
   padding: 24px !important;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm) !important;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   overflow: hidden;
 }
-.cc-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
-.cc-card-lavender { background: linear-gradient(140deg, var(--lavender) 0%, #F5F3FF 100%) !important; }
-.cc-card-sky      { background: linear-gradient(140deg, var(--sky) 0%, #EFF6FF 100%) !important; }
-.cc-card-mint     { background: linear-gradient(140deg, var(--mint) 0%, #F0FDF4 100%) !important; }
-.cc-card-peach    { background: linear-gradient(140deg, var(--peach) 0%, #FFF7F5 100%) !important; }
+.cc-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md) !important; }
+.cc-card-lavender { background: linear-gradient(140deg, var(--lavender) 0%, #FAF8FF 100%) !important; }
+.cc-card-sky      { background: linear-gradient(140deg, var(--sky) 0%, #F5F9FF 100%) !important; }
+.cc-card-mint     { background: linear-gradient(140deg, var(--mint) 0%, #F4FBF7 100%) !important; }
+.cc-card-peach    { background: linear-gradient(140deg, var(--peach) 0%, #FFF9F6 100%) !important; }
+.cc-card-butter   { background: linear-gradient(140deg, var(--butter) 0%, #FFFCF2 100%) !important; }
+
 .cc-card-label {
-  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+  font-size: 0.75rem !important; font-weight: 700 !important; letter-spacing: 0.08em !important;
+  text-transform: uppercase !important; color: #4B5563 !important; margin-bottom: 4px !important;
+  opacity: 1 !important;
 }
 .cc-card-title {
-  font-size: 1.15rem; font-weight: 700; color: var(--black);
-  letter-spacing: -0.02em; margin-bottom: 16px;
+  font-size: 1.2rem !important; font-weight: 700 !important; color: #0B0B0F !important;
+  letter-spacing: -0.02em !important; margin-bottom: 16px !important;
+  opacity: 1 !important;
+}
+
+/* ── Audio Card ──────────────────────────────────────── */
+.cc-audio-card {
+  background: #FFFFFF !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 18px !important;
+  padding: 16px !important;
+}
+.cc-audio-card label, .cc-audio-card span {
+  color: #0B0B0F !important; font-weight: 600 !important; opacity: 1 !important;
 }
 
 /* ── Results heading ─────────────────────────────────── */
 .cc-results-heading {
-  font-size: 1.5rem; font-weight: 700; color: var(--black);
-  letter-spacing: -0.025em; margin: 44px 0 20px;
+  font-size: 1.5rem; font-weight: 700; color: #0B0B0F !important;
+  letter-spacing: -0.025em; margin: 36px 0 16px;
   display: flex; align-items: center; gap: 10px;
 }
 
 /* ── Secondary button ────────────────────────────────── */
 .cc-sec-btn button {
-  background: var(--white) !important;
-  color: var(--black) !important;
+  background: #FFFFFF !important;
+  color: #0B0B0F !important;
   border: 1.5px solid var(--border) !important;
   border-radius: var(--radius-pill) !important;
   padding: 10px 24px !important;
   font-size: 0.9375rem !important; font-weight: 600 !important;
   font-family: 'DM Sans', sans-serif !important;
-  transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s !important;
-  box-shadow: none !important;
+  box-shadow: var(--shadow-sm) !important;
+  opacity: 1 !important;
 }
 .cc-sec-btn button:hover {
-  border-color: var(--black) !important;
+  border-color: #0B0B0F !important;
   transform: scale(1.02) !important;
-  box-shadow: var(--shadow-sm) !important;
 }
 
-/* ── Fade-up entrance ────────────────────────────────── */
-.cc-fade-up { animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) both; }
-.cc-fade-up-1 { animation-delay: 0.06s; }
-.cc-fade-up-2 { animation-delay: 0.13s; }
-.cc-fade-up-3 { animation-delay: 0.20s; }
-.cc-fade-up-4 { animation-delay: 0.28s; }
+/* ── Animation opacity safety ────────────────────────── */
+.cc-fade-up, .cc-fade-up-1, .cc-fade-up-2, .cc-fade-up-3, .cc-fade-up-4 {
+  opacity: 1 !important;
+  animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards !important;
+}
 @keyframes fadeUp {
-  from { opacity:0; transform:translateY(22px); }
-  to   { opacity:1; transform:translateY(0);    }
+  from { opacity: 0.85; transform: translateY(12px); }
+  to   { opacity: 1 !important; transform: translateY(0); }
 }
 
-/* ── Shimmer skeleton ────────────────────────────────── */
-.cc-skeleton {
-  background: linear-gradient(90deg,#F3F4F6 25%,#E9EAEC 50%,#F3F4F6 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-  border-radius: 14px; min-height: 180px;
-}
-@keyframes shimmer {
-  0%  { background-position: 200% 0; }
-  100%{ background-position: -200% 0; }
-}
-
-/* ── Gradio form elements ────────────────────────────── */
-.gradio-container label {
-  font-family: 'DM Sans', sans-serif !important;
-  font-size: 0.875rem !important; font-weight: 600 !important;
-  color: var(--text) !important;
-}
-.gradio-container .gr-input,
-.gradio-container input[type="number"],
-.gradio-container select {
-  border-radius: 10px !important;
-  border: 1.5px solid var(--border) !important;
-  font-family: 'DM Sans', sans-serif !important;
-  font-size: 0.9375rem !important;
-}
-.gradio-container details > summary {
-  font-family: 'DM Sans', sans-serif !important;
-  font-weight: 600 !important; font-size: 0.9rem !important;
-}
-
-/* ── Gallery ─────────────────────────────────────────── */
-.gradio-container .svelte-1oiizq5,
-.gradio-container [data-testid="gallery"] {
-  gap: 8px !important; border-radius: 14px !important;
-}
-
-/* ── Dataframe ───────────────────────────────────────── */
-.gradio-container table {
-  font-family: 'DM Sans', sans-serif !important;
-  font-size: 0.875rem !important; border-radius: 10px !important;
-}
-.gradio-container th {
-  background: var(--bg) !important;
-  font-weight: 700 !important; color: var(--text) !important;
-}
-
-/* ── Audio / Video ───────────────────────────────────── */
-.gradio-container audio { border-radius: 12px !important; width:100%!important; }
-.gradio-container video { border-radius: 14px !important; }
-
-/* ── Markdown body ───────────────────────────────────── */
-.gradio-container .md p, .gradio-container .md li {
-  font-size: 1rem !important; line-height: 1.65 !important;
-  color: var(--text) !important;
-}
-.gradio-container .md h1,.gradio-container .md h2,.gradio-container .md h3 {
-  font-family: 'DM Sans', sans-serif !important;
-  letter-spacing: -0.02em !important; color: var(--black) !important;
-}
-
-/* ── AI disclosure banner ────────────────────────────── */
+/* ── Responsible AI banner ───────────────────────────── */
 .cc-disclosure {
   display: flex; align-items: flex-start; gap: 12px;
-  background: var(--lavender); border: 1px solid var(--lavender-mid);
-  border-radius: 14px; padding: 14px 20px;
-  font-size: 0.875rem; color: var(--lavender-dark); line-height: 1.55;
-  max-width: 1200px; margin: 24px auto 0;
+  background: var(--lavender) !important;
+  border: 1px solid var(--lavender-mid) !important;
+  border-radius: 14px !important;
+  padding: 14px 20px !important;
+  font-size: 0.9375rem !important;
+  color: #0B0B0F !important;
+  line-height: 1.55 !important;
+  max-width: 1200px !important;
+  margin: 18px auto 0 !important;
+  opacity: 1 !important;
+}
+.cc-disclosure strong { color: #0B0B0F !important; font-weight: 700 !important; }
+.cc-disclosure em { color: #3C4043 !important; font-weight: 600 !important; }
+
+/* ── Dataframe table light mode ──────────────────────── */
+.gradio-container table,
+.gradio-container tbody,
+.gradio-container tr,
+.gradio-container td {
+  background-color: #FFFFFF !important;
+  color: #0B0B0F !important;
+  border-color: var(--border) !important;
+}
+.gradio-container th {
+  background-color: #F8F9FA !important;
+  color: #0B0B0F !important;
+  font-weight: 700 !important;
+  border-color: var(--border) !important;
 }
 
 /* ── Footer ──────────────────────────────────────────── */
 .cc-footer {
   text-align: center; padding: 32px 24px;
-  font-size: 0.84rem; color: var(--muted); line-height: 1.6;
+  font-size: 0.86rem; color: #4B5563 !important; line-height: 1.6;
   border-top: 1px solid var(--border);
-  margin-top: 64px; background: var(--bg);
+  margin-top: 56px; background: #F8F9FA;
   border-radius: 24px 24px 0 0;
 }
+.cc-footer strong { color: #0B0B0F !important; }
 
-/* ── Diagnostic section ──────────────────────────────── */
+/* ── Diagnostics ─────────────────────────────────────── */
 .cc-diag-rule { border:none; border-top:1px solid var(--border); margin:28px 0; }
-
-/* ── Responsive ──────────────────────────────────────── */
-@media (max-width: 768px) {
-  .cc-nav { padding: 0 20px; }
-  .cc-nav-links { display: none; }
-  .cc-hero { padding: 48px 20px 40px; }
-  .cc-section { padding: 0 20px; }
-  .cc-hero-h1 { font-size: 2rem; }
-  .cc-pipe-label { display: none; }
-  .cc-pipe-step { padding: 6px 10px; font-size: 0.75rem; }
-}
 
 /* ── Reduced motion ──────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
@@ -678,48 +665,55 @@ footer.svelte-1rjryqp { display: none !important; }
 """
 
 # ---------------------------------------------------------------------------
-# Static HTML constants
+# Static HTML constants & scripts
 # ---------------------------------------------------------------------------
+
+_FORCE_LIGHT_JS = """
+<script>
+(function() {
+  try {
+    var url = new URL(window.location.href);
+    if (url.searchParams.get('__theme') !== 'light') {
+      url.searchParams.set('__theme', 'light');
+      window.location.replace(url.toString());
+      return;
+    }
+  } catch (e) {}
+  function applyLight() {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+    if (document.body) {
+      document.body.classList.remove('dark');
+      document.body.classList.add('light');
+    }
+  }
+  applyLight();
+  if (window.MutationObserver) {
+    new MutationObserver(applyLight).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+  }
+})();
+</script>
+"""
 
 _NAV_HTML = """
 <div class="cc-nav">
   <a class="cc-nav-brand" href="#" onclick="return false;">
     <span>🎬</span> Storyboard Animator
   </a>
-  <div class="cc-nav-links">
-    <button onclick="(function(){var btns=document.querySelectorAll('.tab-nav button');if(btns[0])btns[0].click();})()">Studio</button>
-    <button onclick="(function(){var btns=document.querySelectorAll('.tab-nav button');if(btns[1])btns[1].click();})()">Compare</button>
-    <button onclick="(function(){var btns=document.querySelectorAll('.tab-nav button');if(btns[2])btns[2].click();})()">Responsible AI</button>
-    <button onclick="(function(){var btns=document.querySelectorAll('.tab-nav button');if(btns[3])btns[3].click();})()">Config</button>
-  </div>
 </div>
 <div class="cc-nav-spacer"></div>
 """
 
 _HERO_HTML = """
 <div class="cc-hero cc-fade-up">
-  <!-- Floating blobs -->
   <div class="cc-blobs">
     <div class="cc-blob cc-blob-1"></div>
     <div class="cc-blob cc-blob-2"></div>
     <div class="cc-blob cc-blob-3"></div>
   </div>
-  <!-- Sparkles via inline JS -->
-  <script>
-  (function(){
-    var container = document.currentScript.parentElement;
-    for(var i=0;i<14;i++){
-      var d=document.createElement('div');
-      d.className='cc-sparkle';
-      d.style.cssText='width:'+(3+Math.random()*3)+'px;height:'+(3+Math.random()*3)+'px;'
-        +'left:'+(5+Math.random()*90)+'%;top:'+(10+Math.random()*80)+'%;'
-        +'animation-duration:'+(6+Math.random()*8)+'s;'
-        +'animation-delay:'+(Math.random()*8)+'s;';
-      container.appendChild(d);
-    }
-  })();
-  </script>
-  <!-- Content -->
   <div class="cc-hero-inner">
     <div class="cc-hero-eyebrow cc-fade-up cc-fade-up-1">✨ Generative AI · Story Studio</div>
     <h1 class="cc-hero-h1 cc-fade-up cc-fade-up-2">
@@ -727,8 +721,8 @@ _HERO_HTML = """
       <em>a 6-shot animated story.</em>
     </h1>
     <p class="cc-hero-sub cc-fade-up cc-fade-up-3">
-      Describe your concept below. Gemini writes the shots,
-      SD-Turbo draws the frames, and BLIP checks the quality — all in one click.
+      Describe your concept below. Gemini writes the narrative beats,
+      SD-Turbo renders the frames, and BLIP verifies semantic quality.
     </p>
   </div>
 </div>
@@ -736,7 +730,7 @@ _HERO_HTML = """
 
 _DISCLOSURE_HTML = """
 <div class="cc-disclosure cc-fade-up cc-fade-up-4">
-  <span style="font-size:1.3rem;flex-shrink:0;">🛡️</span>
+  <span style="font-size:1.35rem;flex-shrink:0;">🛡️</span>
   <div>
     <strong>Responsible AI Disclosure:</strong>
     All visual imagery, story beats, and captions are
@@ -765,11 +759,10 @@ _FOOTER_HTML = """
 def build_app():
     with gr.Blocks(title="Storyboard-to-GIF Animator") as demo:
 
-        # ── Fixed nav ───────────────────────────────────────────────────────
-        gr.HTML(_NAV_HTML)
+        # ── Force light mode JS & Nav (logo + project name only) ─────────────
+        gr.HTML(_FORCE_LIGHT_JS + _NAV_HTML)
 
-        # ── Hero (outside tabs so it's always visible on the studio page) ──
-        # We place it inside Tab 1 instead so other tabs are clean
+        # ── Navigation Tabs ─────────────────────────────────────────────────
         with gr.Tabs(elem_classes=["cc-tabs"]):
 
             # ================================================================
@@ -777,13 +770,13 @@ def build_app():
             # ================================================================
             with gr.TabItem("🎬 Studio"):
 
-                # Hero section
+                # Hero section & Responsible AI banner
                 gr.HTML(_HERO_HTML)
                 gr.HTML(_DISCLOSURE_HTML)
 
-                # ── Idea input ─────────────────────────────────────────────
+                # ── Idea input & settings ───────────────────────────────────
                 with gr.Column(elem_classes=["cc-section"]):
-                    gr.HTML('<div style="height:28px;"></div>')
+                    gr.HTML('<div style="height:24px;"></div>')
 
                     user_idea_input = gr.Textbox(
                         label="Your Story Concept",
@@ -802,7 +795,7 @@ def build_app():
                             )
 
                     # Advanced settings accordion
-                    with gr.Accordion("🎨  Advanced Settings", open=False):
+                    with gr.Accordion("🎨  Advanced Settings", open=False, elem_classes=["cc-advanced-accordion"]):
                         gr.HTML('<div style="height:8px;"></div>')
                         with gr.Row():
                             technique_radio = gr.Radio(
@@ -833,7 +826,7 @@ def build_app():
                                 info="'auto' tries local GPU, then HF API, then canvas fallback.",
                             )
 
-                    # Generate button
+                    # Generate button (Solid black pill)
                     with gr.Column(elem_classes=["cc-gen-btn"]):
                         generate_btn = gr.Button(
                             "🚀  Generate 6-Shot Story  →", size="lg"
@@ -843,15 +836,16 @@ def build_app():
                 with gr.Column(elem_classes=["cc-section"]):
                     pipeline_progress_html = gr.HTML(make_pipeline_html())
 
-                # ── Status + audio ─────────────────────────────────────────
+                # ── Status hint & Audio card ───────────────────────────────
                 with gr.Row(elem_classes=["cc-section"]):
                     with gr.Column(scale=7):
                         status_markdown = gr.Markdown(
-                            "💡 *Enter a story idea above and press **Generate** to begin.*"
+                            "💡 *Enter a story idea above and press **Generate** to begin.*",
+                            elem_classes=["cc-status-md"]
                         )
-                    with gr.Column(scale=3):
+                    with gr.Column(scale=3, elem_classes=["cc-audio-card"]):
                         audio_player = gr.Audio(
-                            label="🎵 Background Music",
+                            label="🎵 Background Music Track",
                             type="filepath",
                         )
 
@@ -859,7 +853,7 @@ def build_app():
 
                 # ── Results: 3 pastel cards ────────────────────────────────
                 with gr.Column(elem_classes=["cc-section"]):
-                    gr.HTML('<div class="cc-results-heading">✨ Your Results</div>')
+                    gr.HTML('<div class="cc-results-heading">✨ Generated Storyboard & Animations</div>')
 
                 with gr.Row(elem_classes=["cc-section"], equal_height=False):
 
@@ -902,10 +896,10 @@ def build_app():
 
                 gr.HTML('<div style="height:16px;"></div>')
 
-                # ── Eval table (full width) ────────────────────────────────
+                # ── Eval table ─────────────────────────────────────────────
                 with gr.Column(elem_classes=["cc-section"]):
                     gr.HTML(
-                        '<div style="font-size:0.95rem;color:var(--muted);margin-bottom:12px;">'
+                        '<div style="font-size:0.95rem;color:#3C4043;font-weight:500;margin-bottom:12px;">'
                         'Each frame is captioned by <strong>Salesforce/blip-image-captioning-base</strong> '
                         'and compared to the intended prompt via <strong>sentence-transformers (all-MiniLM-L6-v2)</strong>.'
                         '</div>'
@@ -936,7 +930,7 @@ def build_app():
                     gr.HTML(
                         '<h2 style="font-size:1.6rem;font-weight:700;color:#0B0B0F;'
                         'letter-spacing:-0.025em;margin-bottom:8px;">Prompt Technique Comparison</h2>'
-                        '<p style="color:#6B7280;font-size:1rem;margin-bottom:28px;">'
+                        '<p style="color:#3C4043;font-size:1rem;margin-bottom:28px;">'
                         'See how <strong>Few-Shot</strong> (in-context examples) vs '
                         '<strong>Zero-Shot</strong> (direct instructions) change the LLM\'s '
                         'camera language, rhythm, and descriptive grounding.</p>'
@@ -1024,7 +1018,7 @@ In Generative AI pipelines, text-to-image models can suffer from **object omissi
                     gr.HTML(
                         '<h2 style="font-size:1.6rem;font-weight:700;color:#0B0B0F;'
                         'letter-spacing:-0.025em;margin-bottom:8px;">API Credentials & Config</h2>'
-                        '<p style="color:#6B7280;font-size:1rem;margin-bottom:28px;">'
+                        '<p style="color:#3C4043;font-size:1rem;margin-bottom:28px;">'
                         'Set via environment variables (<code>GEMINI_API_KEY</code>, <code>HF_TOKEN</code>) '
                         'or use the session overrides below. <em>Keys are never logged or saved to disk.</em></p>'
                     )
@@ -1112,11 +1106,32 @@ In Generative AI pipelines, text-to-image models can suffer from **object omissi
 # Entry point
 # ---------------------------------------------------------------------------
 
+def create_light_theme():
+    """Explicit light theme based on Base."""
+    return gr.themes.Base(
+        primary_hue=gr.themes.colors.neutral,
+        secondary_hue=gr.themes.colors.neutral,
+        neutral_hue=gr.themes.colors.neutral,
+    ).set(
+        body_background_fill="#FFFFFF",
+        body_text_color="#0B0B0F",
+        background_fill_primary="#FFFFFF",
+        background_fill_secondary="#F8F9FA",
+        block_background_fill="#FFFFFF",
+        panel_background_fill="#FFFFFF",
+        input_background_fill="#FFFFFF",
+        button_secondary_background_fill="#F8F9FA",
+        block_label_text_color="#0B0B0F",
+        block_title_text_color="#0B0B0F",
+        border_color_primary="#E6E8EC",
+    )
+
+
 if __name__ == "__main__":
     demo = build_app()
     demo.launch(
         server_name="127.0.0.1",
         server_port=7860,
-        theme=gr.themes.Base(),
+        theme=create_light_theme(),
         css=CUSTOM_CSS,
     )
