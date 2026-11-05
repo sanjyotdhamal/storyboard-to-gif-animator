@@ -153,8 +153,8 @@ def run_full_pipeline(
         frames=frames,
         fps_video=24,
         fps_gif=15,
-        hold_frames=22,
-        transition_frames=10,
+        hold_frames=12,
+        transition_frames=8,
         progress_callback=lambda p, msg: progress(0.85 + p * 0.14, desc=msg)
     )
 
@@ -476,7 +476,6 @@ if __name__ == "__main__":
     demo.launch(
         server_name="127.0.0.1",
         server_port=7860,
-        show_api=False,
         theme=gr.themes.Soft(),
         css=CUSTOM_CSS
     )

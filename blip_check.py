@@ -43,8 +43,18 @@ def _load_similarity_model():
     return _SIMILARITY_MODEL
 
 
+def _is_gpu_available() -> bool:
+    try:
+        import torch
+        return torch.cuda.is_available()
+    except Exception:
+        return False
+
+
 def _load_blip_model():
-    """Lazy-loads and caches Salesforce/blip-image-captioning-base."""
+    """Lazy-loads and caches Salesforce/blip-image-captioning-base.
+    Skipped on CPU-only machines to avoid 30-120s per-frame inference delays.
+    """
     global _BLIP_PROCESSOR, _BLIP_MODEL
     if _BLIP_PROCESSOR is not None and _BLIP_MODEL is not None:
         return _BLIP_PROCESSOR, _BLIP_MODEL
@@ -53,8 +63,14 @@ def _load_blip_model():
     from transformers import BlipProcessor, BlipForConditionalGeneration
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cpu":
+        raise RuntimeError(
+            "No GPU detected. BLIP on CPU takes 30-120s per frame. "
+            "Using rule-based caption fallback for instant results."
+        )
+
     print(f"Loading Salesforce/blip-image-captioning-base on {device}...")
-    
+
     _BLIP_PROCESSOR = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     _BLIP_MODEL = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
     _BLIP_MODEL.to(device)

@@ -200,8 +200,19 @@ def _create_synthetic_story_frame(
     return base
 
 
+def _is_gpu_available() -> bool:
+    """Returns True only if a CUDA-capable GPU is detected."""
+    try:
+        import torch
+        return torch.cuda.is_available()
+    except Exception:
+        return False
+
+
 def _load_diffusers_pipeline():
-    """Lazy-loads and caches local stabilityai/sd-turbo pipeline."""
+    """Lazy-loads and caches local stabilityai/sd-turbo pipeline.
+    Skipped automatically when no GPU is present to avoid multi-hour CPU inference.
+    """
     global _LOCAL_DIFFUSER_PIPE
     if _LOCAL_DIFFUSER_PIPE is not None:
         return _LOCAL_DIFFUSER_PIPE
@@ -210,22 +221,26 @@ def _load_diffusers_pipeline():
     from diffusers import AutoPipelineForText2Image
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    torch_dtype = torch.float16 if device == "cuda" else torch.float32
+    if device == "cpu":
+        raise RuntimeError(
+            "No CUDA GPU detected. sd-turbo on CPU takes 5-15 min per frame. "
+            "Skipping to faster fallback automatically."
+        )
+
+    torch_dtype = torch.float16
 
     print(f"Loading {_LOCAL_MODEL_ID} on {device} ({torch_dtype})...")
     pipe = AutoPipelineForText2Image.from_pretrained(
         _LOCAL_MODEL_ID,
         torch_dtype=torch_dtype,
-        variant="fp16" if device == "cuda" else None
+        variant="fp16"
     )
     pipe.to(device)
 
-    # Optimization for fast low-memory inference
-    if device == "cuda":
-        try:
-            pipe.enable_attention_slicing()
-        except Exception:
-            pass
+    try:
+        pipe.enable_attention_slicing()
+    except Exception:
+        pass
 
     _LOCAL_DIFFUSER_PIPE = pipe
     return pipe
@@ -321,29 +336,35 @@ def generate_storyboard_frames(
     progress_callback=None
 ) -> Tuple[List[Image.Image], List[str]]:
     """
-    Generates all 6 storyboard frames sequentially with consistent seed.
-    
+    Generates all 6 storyboard frames with consistent seed.
+    Uses parallel ThreadPoolExecutor for mock/HF-API modes (CPU-safe),
+    and falls back to sequential for local diffusers (GPU memory serialization).
+
     Args:
         shots: List of 6 shot dictionaries with 'image_prompt'.
         seed: Fixed random seed for reproducibility.
         mode: 'auto', 'local_diffusers', 'hf_api', or 'mock'.
         hf_token: Optional Hugging Face token.
         progress_callback: Optional callable for UI progress updates.
-        
+
     Returns:
         Tuple of (list_of_images, list_of_methods)
     """
-    frames = []
-    methods = []
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     total = len(shots)
+    # Determine effective mode for parallelism decision
+    env_mode = os.getenv("IMAGE_GEN_MODE", "auto").lower()
+    effective_mode = mode if mode != "auto" else env_mode
 
-    for i, shot in enumerate(shots):
-        shot_num = shot.get("shot_number", i + 1)
+    # Only parallelize when NOT using local GPU diffusers (GPU memory is not thread-safe)
+    use_parallel = effective_mode in ("mock", "hf_api") or not _is_gpu_available()
+    completed_count = [0]
+
+    def _gen_one(args):
+        idx, shot = args
+        shot_num = shot.get("shot_number", idx + 1)
         prompt = shot.get("image_prompt", "")
-
-        if progress_callback:
-            progress_callback((i + 1) / total, f"Generating frame {shot_num} of {total}...")
-
         img, method = generate_single_frame(
             prompt=prompt,
             shot_number=shot_num,
@@ -351,7 +372,32 @@ def generate_storyboard_frames(
             mode=mode,
             hf_token=hf_token
         )
-        frames.append(img)
-        methods.append(method)
+        completed_count[0] += 1
+        if progress_callback:
+            progress_callback(completed_count[0] / total, f"Generated frame {shot_num} of {total}")
+        return idx, img, method
+
+    if use_parallel:
+        results = [None] * total
+        with ThreadPoolExecutor(max_workers=min(4, total)) as executor:
+            futures = {executor.submit(_gen_one, (i, shot)): i for i, shot in enumerate(shots)}
+            for future in as_completed(futures):
+                idx, img, method = future.result()
+                results[idx] = (img, method)
+        frames = [r[0] for r in results]
+        methods = [r[1] for r in results]
+    else:
+        # Sequential for local GPU diffusers
+        frames, methods = [], []
+        for i, shot in enumerate(shots):
+            shot_num = shot.get("shot_number", i + 1)
+            prompt = shot.get("image_prompt", "")
+            if progress_callback:
+                progress_callback((i + 1) / total, f"Generating frame {shot_num} of {total}...")
+            img, method = generate_single_frame(
+                prompt=prompt, shot_number=shot_num, seed=seed, mode=mode, hf_token=hf_token
+            )
+            frames.append(img)
+            methods.append(method)
 
     return frames, methods

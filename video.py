@@ -32,7 +32,7 @@ os.makedirs(ASSETS_DIR, exist_ok=True)
 def generate_ambient_music_loop(output_path: str = None, duration_sec: float = 12.0) -> str:
     """
     Procedurally synthesizes a gentle, calming 12-second ambient soundtrack loop.
-    Uses standard library `wave` and harmonic sine wave synthesis (CC0 Public Domain).
+    Uses numpy vectorized synthesis for instant generation (CC0 Public Domain).
     No external heavy audio libraries needed.
     """
     if output_path is None:
@@ -44,7 +44,7 @@ def generate_ambient_music_loop(output_path: str = None, duration_sec: float = 1
 
     sample_rate = 44100
     total_samples = int(sample_rate * duration_sec)
-    
+
     # Chords progression (Frequencies in Hz): Cmaj7 -> Am7 -> Fmaj7 -> Gsus4
     chord_freqs = [
         [261.63, 329.63, 392.00, 493.88],  # Cmaj7
@@ -54,40 +54,39 @@ def generate_ambient_music_loop(output_path: str = None, duration_sec: float = 1
     ]
     chord_duration = duration_sec / len(chord_freqs)
 
+    # Vectorized numpy synthesis — orders of magnitude faster than Python loop
+    t = np.linspace(0, duration_sec, total_samples, endpoint=False)
+    left_signal = np.zeros(total_samples, dtype=np.float64)
+    right_signal = np.zeros(total_samples, dtype=np.float64)
+
+    for chord_idx, freqs in enumerate(chord_freqs):
+        t_start = chord_idx * chord_duration
+        t_end = t_start + chord_duration
+        mask = (t >= t_start) & (t < t_end)
+        chord_t = t[mask] - t_start
+
+        envelope = np.exp(-1.8 * (chord_t / chord_duration)) * (1.0 - np.exp(-25.0 * chord_t))
+        border_fade = np.minimum(1.0, t[mask] / 0.5) * np.minimum(1.0, (duration_sec - t[mask]) / 0.5)
+
+        for note_i, freq in enumerate(freqs):
+            pan = 0.3 + 0.4 * (note_i / len(freqs))
+            sig = np.sin(2.0 * math.pi * freq * t[mask]) * 0.22
+            sig += np.sin(4.0 * math.pi * freq * t[mask]) * 0.05
+            left_signal[mask] += sig * (1.0 - pan) * envelope * border_fade * 12000.0
+            right_signal[mask] += sig * pan * envelope * border_fade * 12000.0
+
+    # Clip and pack as 16-bit stereo
+    left_pcm = np.clip(left_signal, -32767, 32767).astype(np.int16)
+    right_pcm = np.clip(right_signal, -32767, 32767).astype(np.int16)
+    stereo = np.empty(total_samples * 2, dtype=np.int16)
+    stereo[0::2] = left_pcm
+    stereo[1::2] = right_pcm
+
     with wave.open(output_path, "w") as wav_file:
-        wav_file.setnchannels(2)  # Stereo
-        wav_file.setsampwidth(2)  # 16-bit
+        wav_file.setnchannels(2)   # Stereo
+        wav_file.setsampwidth(2)   # 16-bit
         wav_file.setframerate(sample_rate)
-
-        for i in range(total_samples):
-            t = i / sample_rate
-            chord_idx = min(int(t / chord_duration), len(chord_freqs) - 1)
-            active_notes = chord_freqs[chord_idx]
-            chord_t = t - (chord_idx * chord_duration)
-
-            # Natural exponential acoustic decay envelope
-            envelope = math.exp(-1.8 * (chord_t / chord_duration)) * (1.0 - math.exp(-25.0 * chord_t))
-
-            # Sum harmonic frequencies with soft warmth
-            left_val = 0.0
-            right_val = 0.0
-            for note_i, freq in enumerate(active_notes):
-                # Subtle stereo panning across chord notes
-                pan = 0.3 + 0.4 * (note_i / len(active_notes))
-                sig = math.sin(2.0 * math.pi * freq * t) * 0.22
-                # Sub-harmonic overtone for warmth
-                sig += math.sin(4.0 * math.pi * freq * t) * 0.05
-                left_val += sig * (1.0 - pan)
-                right_val += sig * pan
-
-            # Overall volume scaling with fade-in and fade-out at borders
-            border_fade = min(1.0, t / 0.5) * min(1.0, (duration_sec - t) / 0.5)
-            master_gain = 12000.0 * envelope * border_fade
-
-            sample_l = int(max(-32767, min(32767, left_val * master_gain)))
-            sample_r = int(max(-32767, min(32767, right_val * master_gain)))
-
-            wav_file.writeframes(struct.pack("<hh", sample_l, sample_r))
+        wav_file.writeframes(stereo.tobytes())
 
     print(f"Synthesized procedural ambient music loop saved to: {output_path}")
     return output_path
@@ -276,8 +275,8 @@ def create_storyboard_media(
     frames: List[Image.Image],
     fps_video: int = 24,
     fps_gif: int = 15,
-    hold_frames: int = 20,
-    transition_frames: int = 10,
+    hold_frames: int = 12,
+    transition_frames: int = 8,
     progress_callback=None
 ) -> Tuple[str, str, str]:
     """
