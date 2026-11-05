@@ -1,0 +1,6 @@
+test_id,concept,zero_shot_avg_blip_similarity,few_shot_avg_blip_similarity,score_delta,pct_improvement,zero_shot_mismatches,few_shot_mismatches
+1,A small lonely robot in a greenhouse learns to paint flowers,0.2079,0.2302,0.0223,+10.7%,6,6
+2,A timid sea turtle discovers a glowing celestial star in a spiral shell,0.2347,0.2544,0.0197,+8.4%,6,6
+3,An old clockmaker invents a mechanical hummingbird that takes flight,0.2635,0.2794,0.0159,+6.0%,6,6
+4,A whimsical cat baker accidentally creates a flying croissant balloon,0.202,0.2246,0.0226,+11.2%,6,6
+5,A young botanist cultivates a giant glowing bioluminescent mushroom tree,0.2298,0.2527,0.0229,+10.0%,6,6

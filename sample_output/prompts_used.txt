@@ -1,0 +1,27 @@
+SAMPLE STORYBOARD RUN: A small lonely robot in a greenhouse learns to paint flowers
+============================================================
+
+Shot 1: Wide Establishing Shot
+Caption: Introduction: The story begins with A small lonely robot in a greenhouse learns to paint flowers in its original setting.
+Prompt: digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, wide establishing shot of A small lonely robot in a greenhouse learns to paint flowers, setting the peaceful world, cinematic environment, with rich cinematic framing and character nuance
+----------------------------------------
+Shot 2: Medium Discovery Shot
+Caption: Inciting Incident: An unexpected discovery sparks a journey of transformation.
+Prompt: digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, medium shot focusing on the main character discovering an intriguing mystery related to A small lonely robot in a greenhouse learns to paint flowers, expressive eyes, with rich cinematic framing and character nuance
+----------------------------------------
+Shot 3: Close-up Action Shot
+Caption: Rising Action: Working through the initial challenge with steady determination.
+Prompt: digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, close-up dynamic shot of the first attempt and challenge during A small lonely robot in a greenhouse learns to paint flowers, detailed textures and vibrant lighting, with rich cinematic framing and character nuance
+----------------------------------------
+Shot 4: Low-angle Dramatic Shot
+Caption: Turning Point: A breakthrough moment where effort and inspiration collide.
+Prompt: digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, low angle dramatic perspective of the turning point in A small lonely robot in a greenhouse learns to paint flowers, emotional intensity, dynamic color contrast, with rich cinematic framing and character nuance
+----------------------------------------
+Shot 5: Climactic High-Energy Shot
+Caption: Climax: The ultimate achievement unfolds in full splendor.
+Prompt: digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, climactic scene reaching peak realization in A small lonely robot in a greenhouse learns to paint flowers, sparkling particles, radiant visual spectacle, with rich cinematic framing and character nuance
+----------------------------------------
+Shot 6: Wide Heartwarming Shot
+Caption: Resolution: A peaceful celebration of the completed journey.
+Prompt: digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, wide heartwarming resolution shot concluding A small lonely robot in a greenhouse learns to paint flowers, golden hour light, sense of fulfillment, with rich cinematic framing and character nuance
+----------------------------------------
