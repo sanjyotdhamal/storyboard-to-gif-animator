@@ -1,20 +1,22 @@
 """
-llm.py - Storyboard Generation with Gemini API & Prompt Engineering
-===================================================================
+llm.py - Storyboard Generation with Google GenAI SDK & Prompt Engineering
+========================================================================
 Generates a coherent 6-shot visual storyboard from a user's text concept.
 
 Key Concepts Demonstrated:
 1. Zero-Shot Prompting: Providing direct task instructions without prior examples.
-2. Few-Shot Prompting: Providing high-quality input-output examples in context to guide
-   narrative rhythm, cinematic camera terminology, and visual consistency.
+2. Few-Shot Prompting: Providing high-quality in-context exemplars to guide
+   narrative rhythm, camera terminology, and visual consistency.
 3. Structured Output: Generating strictly formatted JSON containing 6 distinct narrative beats.
 4. Shared Style Prefix: Prepended to every frame prompt to maintain artistic coherence across the clip.
+5. Dynamic Idea-Grounded Fallback: If API encounters errors, builds narrative directly from the user's concept.
 """
 
 import os
 import json
 import re
-from typing import Dict, Any, List, Tuple
+import time
+from typing import Dict, Any, List, Tuple, Optional
 from dotenv import load_dotenv
 
 # Load local environment variables from .env if present
@@ -122,6 +124,7 @@ Output JSON:
 }
 """
 
+
 def _clean_json_response(raw_text: str) -> Dict[str, Any]:
     """Extracts and parses JSON object from an LLM response string."""
     # Find markdown JSON blocks or bare json brackets
@@ -135,95 +138,150 @@ def _clean_json_response(raw_text: str) -> Dict[str, Any]:
     return json.loads(content)
 
 
-def _generate_mock_storyboard(idea: str, technique: str, style_prefix: str) -> Dict[str, Any]:
+def _extract_subject_and_action(idea: str) -> Tuple[str, str]:
+    """Extracts a concise subject and scene setting from the user's idea string."""
+    clean = idea.strip()
+    words = clean.split()
+    subject = " ".join(words[:4]) if len(words) >= 4 else clean
+    return subject, clean
+
+
+def _generate_mock_storyboard(
+    idea: str,
+    technique: str,
+    style_prefix: str,
+    reason: str = "Fallback mode"
+) -> Dict[str, Any]:
     """
-    Fallback deterministic storyboard generator if Gemini API key is missing or offline.
-    Ensures complete end-to-end functionality and student testing without quota limits.
+    Builds an offline fallback storyboard that is deeply grounded in the user's idea text.
+    Every shot explicitly mentions the subject, setting, and action described by the user.
     """
-    cleaned_idea = idea.strip() or "A creative adventure"
-    
-    # Enrich slightly based on technique to demonstrate difference
-    extra_detail = "with rich cinematic framing and character nuance" if technique == "few-shot" else "with direct narrative progression"
-    
+    cleaned_idea = idea.strip() or "A magical adventure"
+    subject, full_concept = _extract_subject_and_action(cleaned_idea)
+
+    # Narrative progression grounded in the user's concept
     shots = [
         {
             "shot_number": 1,
-            "camera": "Wide Establishing Shot",
-            "image_prompt": f"{style_prefix}, wide establishing shot of {cleaned_idea}, setting the peaceful world, cinematic environment, {extra_detail}",
-            "caption": f"Introduction: The story begins with {cleaned_idea} in its original setting."
+            "camera": "Wide establishing cinematic shot",
+            "image_prompt": (
+                f"{style_prefix}, wide establishing shot of {cleaned_idea}, "
+                f"introducing the primary protagonist and the surrounding environment, vibrant atmospheric depth"
+            ),
+            "caption": f"In the opening scene, {cleaned_idea} begins in a calm, vivid environment."
         },
         {
             "shot_number": 2,
-            "camera": "Medium Discovery Shot",
-            "image_prompt": f"{style_prefix}, medium shot focusing on the main character discovering an intriguing mystery related to {cleaned_idea}, expressive eyes, {extra_detail}",
-            "caption": "Inciting Incident: An unexpected discovery sparks a journey of transformation."
+            "camera": "Medium discovery shot",
+            "image_prompt": (
+                f"{style_prefix}, medium shot featuring {subject}, discovering a hidden opportunity or spark "
+                f"directly tied to {full_concept}, expressive eyes and curious posture"
+            ),
+            "caption": f"A sudden curious discovery draws {subject} into the journey of {full_concept}."
         },
         {
             "shot_number": 3,
-            "camera": "Close-up Action Shot",
-            "image_prompt": f"{style_prefix}, close-up dynamic shot of the first attempt and challenge during {cleaned_idea}, detailed textures and vibrant lighting, {extra_detail}",
-            "caption": "Rising Action: Working through the initial challenge with steady determination."
+            "camera": "Close-up action engagement shot",
+            "image_prompt": (
+                f"{style_prefix}, close-up focused shot of {subject} actively engaged in {full_concept}, "
+                f"hands or paws or mechanical tools in motion, rich textural details and warm directional lighting"
+            ),
+            "caption": f"With deep focus and care, {subject} takes on the challenge of {full_concept}."
         },
         {
             "shot_number": 4,
-            "camera": "Low-angle Dramatic Shot",
-            "image_prompt": f"{style_prefix}, low angle dramatic perspective of the turning point in {cleaned_idea}, emotional intensity, dynamic color contrast, {extra_detail}",
-            "caption": "Turning Point: A breakthrough moment where effort and inspiration collide."
+            "camera": "Low angle dramatic tension shot",
+            "image_prompt": (
+                f"{style_prefix}, low angle dramatic shot of {cleaned_idea}, experiencing a crucial turning point, "
+                f"dynamic visual tension, swirling color and lighting contrast"
+            ),
+            "caption": f"At the turning point, {subject} overcomes an unexpected test while pursuing {full_concept}."
         },
         {
             "shot_number": 5,
-            "camera": "Climactic High-Energy Shot",
-            "image_prompt": f"{style_prefix}, climactic scene reaching peak realization in {cleaned_idea}, sparkling particles, radiant visual spectacle, {extra_detail}",
-            "caption": "Climax: The ultimate achievement unfolds in full splendor."
+            "camera": "Climactic high-energy spectacle shot",
+            "image_prompt": (
+                f"{style_prefix}, climactic cinematic spectacle of {cleaned_idea}, peak visual breakthrough, "
+                f"glowing illumination, radiant particles, celebratory atmosphere"
+            ),
+            "caption": f"In a triumphant breakthrough, {subject} brings {full_concept} to dazzling fruition!"
         },
         {
             "shot_number": 6,
-            "camera": "Wide Heartwarming Shot",
-            "image_prompt": f"{style_prefix}, wide heartwarming resolution shot concluding {cleaned_idea}, golden hour light, sense of fulfillment, {extra_detail}",
-            "caption": "Resolution: A peaceful celebration of the completed journey."
+            "camera": "Wide heartwarming resolution shot",
+            "image_prompt": (
+                f"{style_prefix}, wide panoramic heartwarming shot concluding {cleaned_idea}, "
+                f"peaceful golden hour lighting, lasting fulfillment and visual harmony"
+            ),
+            "caption": f"The story concludes with {cleaned_idea} leaving a joyful, lasting mark on the world."
         }
     ]
 
     return {
-        "title": f"The Tale of: {cleaned_idea[:30]}",
+        "title": f"Story of {subject[:35]}",
         "technique": technique,
         "style_prefix": style_prefix,
         "shots": shots,
-        "source": "educational_mock_generator"
+        "source": "educational_concept_fallback",
+        "is_fallback": True,
+        "fallback_reason": reason
     }
+
+
+def _get_candidate_models() -> List[str]:
+    """Returns an ordered list of Gemini Flash models to try."""
+    env_model = os.getenv("GEMINI_MODEL", "").strip()
+    candidates = []
+    if env_model:
+        candidates.append(env_model)
+
+    # Standard currently supported Gemini Flash models
+    defaults = [
+        "gemini-3-flash-preview",
+        "gemini-3.8-flash",
+        "gemini-3.1-flash-lite-preview",
+        "gemini-flash-latest"
+    ]
+    for d in defaults:
+        if d not in candidates:
+            candidates.append(d)
+    return candidates
 
 
 def generate_storyboard(
     idea: str,
     technique: str = "few-shot",
     style_prefix: str = DEFAULT_STYLE_PREFIX,
-    api_key: str = None
+    api_key: Optional[str] = None
 ) -> Tuple[Dict[str, Any], str]:
     """
-    Generates a 6-shot visual storyboard using Gemini API (or structured educational fallback).
+    Generates a 6-shot visual storyboard using Google GenAI SDK (google.genai).
+    Implements model discovery, retry logic, and concept-grounded fallback.
     
     Args:
         idea: The user's prompt / narrative concept.
         technique: 'zero-shot' or 'few-shot'
         style_prefix: Visual style prepended to all image prompts for aesthetic consistency.
-        api_key: Optional explicit Gemini API key (defaults to os.environ['GEMINI_API_KEY']).
+        api_key: Optional explicit Gemini API key (defaults to GEMINI_API_KEY from .env).
         
     Returns:
-        Tuple of (storyboard_dict, system_note)
+        Tuple of (storyboard_dict, status_message)
     """
     active_key = api_key or os.getenv("GEMINI_API_KEY")
 
-    # If no Gemini API key is configured, fallback to high-quality educational generator
+    # If no key configured, fallback with explicit warning
     if not active_key or active_key.strip() == "" or "your_gemini_api_key" in active_key:
-        note = "ℹ️ Running in Educational Fallback mode (No GEMINI_API_KEY provided in .env). Generated deterministic 6-shot storyboard."
-        return _generate_mock_storyboard(idea, technique, style_prefix), note
+        err_msg = "No GEMINI_API_KEY configured in environment or UI settings."
+        print(f"[LLM WARNING] {err_msg}")
+        fallback_data = _generate_mock_storyboard(idea, technique, style_prefix, reason=err_msg)
+        return fallback_data, f"⚠️ Gemini API key missing. Generated concept-grounded fallback storyboard."
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=active_key)
-        
-        # Select current fast and capable Gemini model
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=active_key.strip())
+        candidate_models = _get_candidate_models()
 
         system_instruction = (
             "You are a professional animation director and visual storyboard artist. "
@@ -236,10 +294,11 @@ def generate_storyboard(
             "Beat 5: Visual climax / breakthrough\n"
             "Beat 6: Heartwarming resolution / lasting impact\n\n"
             "CRITICAL FORMAT RULES:\n"
-            "1. Output MUST be strictly valid JSON with no conversational preamble.\n"
+            "1. Output MUST be strictly valid JSON with keys 'title' and 'shots'. No preamble or conversational markdown outside JSON.\n"
             "2. Exactly 6 shots in an array named 'shots'.\n"
-            f"3. Every shot's 'image_prompt' MUST begin with the exact shared style prefix: '{style_prefix}' followed by the scene description.\n"
-            "4. Each shot must include: 'shot_number' (1-6), 'camera' (e.g., Wide shot, Close-up), 'image_prompt', and 'caption' (1 clear narrative sentence)."
+            f"3. Every shot's 'image_prompt' MUST begin with the exact shared style prefix: '{style_prefix}' "
+            "followed by a vivid visual scene description that explicitly includes the user concept's protagonist, action, and setting.\n"
+            "4. Each shot must include: 'shot_number' (1-6), 'camera' (e.g. Wide shot, Close-up macro), 'image_prompt', and 'caption' (1 clear narrative sentence)."
         )
 
         if technique.lower() == "few-shot":
@@ -250,44 +309,91 @@ def generate_storyboard(
                 f"User Concept: \"{idea}\"\n"
                 f"Output JSON:"
             )
-        else: # zero-shot
+        else:  # zero-shot
             user_prompt = (
                 f"{system_instruction}\n\n"
                 f"User Concept: \"{idea}\"\n"
                 f"Output JSON:"
             )
 
-        response = model.generate_content(
-            user_prompt,
-            generation_config={"temperature": 0.7, "response_mime_type": "application/json"}
-        )
+        last_error = None
+        response_text = None
+        successful_model = None
 
-        parsed = _clean_json_response(response.text)
-        
-        # Ensure style prefix is cleanly prepended on each shot if model omitted it
+        # Try models in order with exponential backoff on transient errors
+        for model_name in candidate_models:
+            print(f"[LLM] Attempting generation with model: '{model_name}'...")
+            for attempt in range(1, 4):
+                try:
+                    resp = client.models.generate_content(
+                        model=model_name,
+                        contents=user_prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            temperature=0.7,
+                        )
+                    )
+                    if resp and resp.text:
+                        response_text = resp.text
+                        successful_model = model_name
+                        break
+                except Exception as call_err:
+                    err_str = str(call_err)
+                    last_error = err_str
+                    print(f"[LLM] Attempt {attempt} for '{model_name}' failed: {err_str[:160]}")
+                    # If 404 model not found, don't retry same model; break to try next candidate
+                    if "404" in err_str or "NOT_FOUND" in err_str:
+                        break
+                    time.sleep(1.2 * attempt)
+
+            if response_text:
+                break
+
+        if not response_text:
+            raise RuntimeError(f"All Gemini models exhausted. Last error: {last_error}")
+
+        # Print raw LLM response as required by Requirement 1
+        print(f"\n[LLM RAW OUTPUT - Model: {successful_model}]\n{response_text}\n")
+
+        parsed = _clean_json_response(response_text)
+
+        # Ensure style prefix is cleanly prepended and subject is preserved on every shot
+        subject, _ = _extract_subject_and_action(idea)
         if "shots" in parsed and isinstance(parsed["shots"], list):
-            for s in parsed["shots"]:
-                p = s.get("image_prompt", "")
-                if not p.startswith(style_prefix[:20]):
-                    s["image_prompt"] = f"{style_prefix}, {p}"
-                    
+            for i, s in enumerate(parsed["shots"]):
+                s["shot_number"] = i + 1
+                prompt = s.get("image_prompt", "")
+                # Ensure style prefix is present
+                if not prompt.startswith(style_prefix[:25]):
+                    prompt = f"{style_prefix}, {prompt}"
+                # Ensure the user's idea subject is mentioned in the prompt (Requirement 4)
+                if subject.lower() not in prompt.lower():
+                    prompt = f"{prompt}, featuring {subject}"
+                s["image_prompt"] = prompt
+
         parsed["technique"] = technique
         parsed["style_prefix"] = style_prefix
-        parsed["source"] = "gemini-1.5-flash"
-        return parsed, "✅ Storyboard successfully generated using Gemini 1.5 Flash."
+        parsed["source"] = f"gemini ({successful_model})"
+        parsed["is_fallback"] = False
+        parsed["model"] = successful_model
+        parsed["model_used"] = successful_model
+
+        note = f"✅ Storyboard generated by Gemini ({successful_model})."
+        return parsed, note
 
     except Exception as e:
         error_msg = str(e)
-        note = f"⚠️ Gemini API encounter: {error_msg}. Using offline fallback generator."
-        fallback_data = _generate_mock_storyboard(idea, technique, style_prefix)
+        print(f"[LLM ERROR] Gemini API call failed: {error_msg}")
+        fallback_data = _generate_mock_storyboard(idea, technique, style_prefix, reason=error_msg)
         fallback_data["api_error"] = error_msg
+        note = f"⚠️ Gemini failed ({error_msg[:120]}), using offline fallback. Results are NOT based on live Gemini output."
         return fallback_data, note
 
 
 def compare_prompts(
     idea: str,
     style_prefix: str = DEFAULT_STYLE_PREFIX,
-    api_key: str = None
+    api_key: Optional[str] = None
 ) -> Tuple[Dict[str, Any], Dict[str, Any], str]:
     """
     Executes both Zero-Shot and Few-Shot techniques on the same concept

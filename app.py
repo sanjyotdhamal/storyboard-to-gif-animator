@@ -9,6 +9,7 @@ generate button, gallery, MP4 + GIF, music, BLIP table, JSON viewer, all tabs.
 
 import os
 import math
+import time
 import gradio as gr
 from dotenv import load_dotenv
 
@@ -143,10 +144,13 @@ def _run_pipeline_generator(
                  eval_table, blip_ring_html, gif_image, video_player, audio_player
     """
     # ── Step 0: Safety ──────────────────────────────────────────────────────
+    t_start = time.time()
     yield (make_pipeline_html(0), "🛡️ **Checking content safety guardrails...**",
            None, None, None, make_blip_ring_html(), None, None, None)
 
+    t0 = time.time()
     is_safe, safety_msg, _ = check_safety(idea)
+    t_safety = time.time() - t0
     if not is_safe:
         yield (make_pipeline_html(),
                f"🚫 **Safety block:** {safety_msg}",
@@ -158,23 +162,31 @@ def _run_pipeline_generator(
            f"✍️ **Generating `{technique}` storyboard with Gemini...**",
            None, None, None, make_blip_ring_html(), None, None, None)
 
+    t0 = time.time()
     clean_prefix = style_prefix.strip() or DEFAULT_STYLE_PREFIX
     storyboard_data, llm_note = generate_storyboard(
         idea=idea, technique=technique, style_prefix=clean_prefix,
         api_key=api_key_override.strip() if api_key_override else None,
     )
+    t_llm = time.time() - t0
     shots = storyboard_data.get("shots", [])
+
+    is_fallback = storyboard_data.get("is_fallback", False)
+    fallback_reason = storyboard_data.get("fallback_reason", "")
+    llm_model = storyboard_data.get("model", "gemini-3-flash-preview")
 
     # ── Step 2: Frame Generation ─────────────────────────────────────────
     yield (make_pipeline_html(2, {0, 1}),
            f"🖼️ **Generating {len(shots)} visual frames (seed={seed})...**",
            storyboard_data, None, None, make_blip_ring_html(), None, None, None)
 
+    t0 = time.time()
     frames, gen_methods = generate_storyboard_frames(
         shots=shots, seed=int(seed), mode=image_mode,
         hf_token=hf_token_override.strip() if hf_token_override else None,
         progress_callback=lambda p, msg: progress(0.35 + p * 0.30, desc=msg),
     )
+    t_frames = time.time() - t0
 
     # Show frames immediately while video renders
     yield (make_pipeline_html(3, {0, 1, 2}),
@@ -182,11 +194,13 @@ def _run_pipeline_generator(
            storyboard_data, frames, None, make_blip_ring_html(), None, None, None)
 
     # ── Step 3: Video ────────────────────────────────────────────────────
-    gif_path, mp4_path, music_path = create_storyboard_media(
+    t0 = time.time()
+    gif_path, mp4_path, music_path, run_dir = create_storyboard_media(
         frames=frames, fps_video=24, fps_gif=15,
         hold_frames=12, transition_frames=8,
         progress_callback=lambda p, msg: progress(0.65 + p * 0.20, desc=msg),
     )
+    t_video = time.time() - t0
 
     # ── Step 4: BLIP Quality Check ───────────────────────────────────────
     yield (make_pipeline_html(4, {0, 1, 2, 3}),
@@ -194,17 +208,45 @@ def _run_pipeline_generator(
            storyboard_data, frames, None, make_blip_ring_html(),
            gif_path, mp4_path, music_path)
 
+    t0 = time.time()
     eval_df, avg_score, eval_details = evaluate_storyboard_frames(
         frames=frames, shots=shots, threshold=float(mismatch_threshold),
         progress_callback=lambda p, msg: progress(0.85 + p * 0.15, desc=msg),
     )
+    t_quality = time.time() - t0
+    t_total = time.time() - t_start
 
     mismatch_count = sum(1 for d in eval_details if d.get("is_mismatch"))
-    engine = gen_methods[0] if gen_methods else "Canvas"
+    engine = gen_methods[0] if gen_methods else "Local sd-turbo"
+
+    if is_fallback:
+        warning_banner = (
+            f'<div style="background-color:#FEE2E2;border:2px solid #EF4444;color:#991B1B;'
+            f'padding:14px 18px;border-radius:14px;font-weight:600;margin-bottom:16px;'
+            f'box-shadow:0 2px 8px rgba(239,68,68,0.12);">'
+            f'<div style="font-size:1.05rem;display:flex;align-items:center;gap:8px;">'
+            f'⚠️ <span>Gemini failed, using offline fallback. Results are NOT based on your idea</span></div>'
+            f'<div style="font-size:0.85rem;font-weight:400;margin-top:6px;color:#7F1D1D;">'
+            f'<strong>Error details:</strong> {fallback_reason}</div>'
+            f'</div>'
+        )
+    else:
+        warning_banner = (
+            f'<div style="background-color:#ECFDF5;border:1.5px solid #10B981;color:#065F46;'
+            f'padding:10px 16px;border-radius:12px;font-size:0.9rem;font-weight:600;margin-bottom:14px;'
+            f'display:flex;align-items:center;gap:8px;">'
+            f'✓ <span>Live Gemini LLM (<code>{llm_model}</code>) &amp; {engine} active</span>'
+            f'</div>'
+        )
+
     summary = (
+        f"{warning_banner}\n\n"
         f"### 🎉 Storyboard Generated Successfully!\n"
-        f"- **Technique**: `{technique}` &nbsp;·&nbsp; **Engine**: `{engine}` &nbsp;·&nbsp; **Seed**: `{seed}`\n"
-        f"- **Average BLIP Score**: `{avg_score:.3f}` &nbsp;·&nbsp; **Quality Flags**: `{mismatch_count}` potential mismatch(es)\n"
+        f"- **LLM Storyboard**: `{llm_model}` ({t_llm:.2f}s) &nbsp;·&nbsp; **Technique**: `{technique}`\n"
+        f"- **Image Engine**: `{engine}` ({t_frames:.2f}s) &nbsp;·&nbsp; **Seed**: `{seed}` (Frames seeded `{seed}+1`–`{seed}+6`)\n"
+        f"- **Video & Audio**: Cross-fade Transitions + Synthesized Audio ({t_video:.2f}s)\n"
+        f"- **BLIP Quality**: Avg `{avg_score:.3f}` &nbsp;·&nbsp; `{mismatch_count}` potential mismatch flag(s) ({t_quality:.2f}s)\n"
+        f"- **Run Artifacts**: Saved to `{run_dir}` &nbsp;·&nbsp; **Total Pipeline Time**: `{t_total:.2f}s`\n"
         f"- **AI Disclosure**: Verified 'AI-Generated' watermark stamped onto all frames."
     )
 

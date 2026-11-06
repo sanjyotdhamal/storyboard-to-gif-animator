@@ -2,7 +2,7 @@
 gradio>=5.0.0
 
 # LLM: Gemini API
-google-generativeai>=0.8.0
+google-genai>=0.8.0
 
 # Deep Learning and Image Generation
 torch
