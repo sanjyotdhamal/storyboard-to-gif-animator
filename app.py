@@ -123,6 +123,52 @@ def make_blip_ring_html(score=None) -> str:
 """
 
 
+def make_storyboard_proof_html(shots: list, gen_methods: list = None) -> str:
+    """Renders collapsible shot cards showing captions, MD5 frame hashes, and exact prompts."""
+    if not shots:
+        return ""
+    cards = []
+    for i, s in enumerate(shots, 1):
+        num = s.get("shot_number", i)
+        caption = s.get("caption", "")
+        prompt = s.get("image_prompt", "")
+        md5 = s.get("md5_hash", "")
+        engine = gen_methods[i - 1] if gen_methods and len(gen_methods) >= i else "sd-turbo"
+
+        md5_badge = (
+            f'<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.75rem;'
+            f'color:#0B0B0F;background:#E8E3FF;padding:2px 8px;border-radius:6px;font-weight:600;">'
+            f'MD5: {md5[:12]}…</span>' if md5 else ''
+        )
+
+        cards.append(f"""
+<div style="background:#FFFFFF;border:1px solid #E6E8EC;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <span style="font-weight:700;font-size:0.85rem;color:#0B0B0F;background:#F8F9FA;padding:4px 10px;border-radius:8px;border:1px solid #E6E8EC;">SHOT {num}</span>
+    {md5_badge}
+  </div>
+  <div style="font-size:0.92rem;font-weight:600;color:#0B0B0F;line-height:1.45;margin-bottom:8px;">
+    {caption}
+  </div>
+  <details style="font-size:0.8rem;color:#4B5563;">
+    <summary style="cursor:pointer;font-weight:600;color:#2563EB;outline:none;">🔍 View exact prompt</summary>
+    <div style="margin-top:8px;padding:10px 12px;background:#F8F9FA;border-left:3px solid #2563EB;border-radius:6px;font-family:ui-monospace,monospace;font-size:0.78rem;line-height:1.5;word-break:break-word;color:#1E293B;">
+      {prompt}
+    </div>
+  </details>
+</div>
+""")
+
+    return f"""
+<div style="margin-top:16px;">
+  <div style="font-size:0.85rem;font-weight:700;color:#0B0B0F;letter-spacing:0.02em;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+    <span>🔍</span> Verified Shot Details, Anchors &amp; MD5 Hashes
+  </div>
+  <div>{''.join(cards)}</div>
+</div>
+"""
+
+
 # ---------------------------------------------------------------------------
 # Pipeline Generator (real-time progress updates)
 # ---------------------------------------------------------------------------
@@ -131,6 +177,7 @@ def _run_pipeline_generator(
     idea: str,
     technique: str,
     seed: int,
+    img2img_strength: float,
     style_prefix: str,
     mismatch_threshold: float,
     image_mode: str,
@@ -140,13 +187,13 @@ def _run_pipeline_generator(
 ):
     """
     Generator yielding UI updates after each pipeline stage.
-    Outputs (9): pipeline_html, status_md, json_viewer, gallery,
-                 eval_table, blip_ring_html, gif_image, video_player, audio_player
+    Outputs (10): pipeline_html, status_md, json_viewer, gallery,
+                  eval_table, blip_ring_html, gif_image, video_player, audio_player, proof_html
     """
     # ── Step 0: Safety ──────────────────────────────────────────────────────
     t_start = time.time()
     yield (make_pipeline_html(0), "🛡️ **Checking content safety guardrails...**",
-           None, None, None, make_blip_ring_html(), None, None, None)
+           None, None, None, make_blip_ring_html(), None, None, None, "")
 
     t0 = time.time()
     is_safe, safety_msg, _ = check_safety(idea)
@@ -154,13 +201,13 @@ def _run_pipeline_generator(
     if not is_safe:
         yield (make_pipeline_html(),
                f"🚫 **Safety block:** {safety_msg}",
-               None, None, None, make_blip_ring_html(), None, None, None)
+               None, None, None, make_blip_ring_html(), None, None, None, "")
         return
 
     # ── Step 1: LLM Storyboard ───────────────────────────────────────────
     yield (make_pipeline_html(1, {0}),
            f"✍️ **Generating `{technique}` storyboard with Gemini...**",
-           None, None, None, make_blip_ring_html(), None, None, None)
+           None, None, None, make_blip_ring_html(), None, None, None, "")
 
     t0 = time.time()
     clean_prefix = style_prefix.strip() or DEFAULT_STYLE_PREFIX
@@ -175,23 +222,59 @@ def _run_pipeline_generator(
     fallback_reason = storyboard_data.get("fallback_reason", "")
     llm_model = storyboard_data.get("model", "gemini-3-flash-preview")
 
+    # Halt with visible error if Gemini failed (Requirement 3: NO SILENT FALLBACK)
+    if is_fallback:
+        error_banner = (
+            f'<div style="background-color:#FEE2E2;border:2px solid #EF4444;color:#991B1B;'
+            f'padding:16px 20px;border-radius:14px;font-weight:600;margin-bottom:16px;'
+            f'box-shadow:0 2px 8px rgba(239,68,68,0.15);">'
+            f'<div style="font-size:1.1rem;display:flex;align-items:center;gap:8px;">'
+            f'❌ <span>Gemini Storyboard Generation Failed</span></div>'
+            f'<div style="font-size:0.9rem;font-weight:400;margin-top:6px;color:#7F1D1D;">'
+            f'<strong>Reason:</strong> {fallback_reason or "Gemini API call could not be completed."}</div>'
+            f'<div style="font-size:0.82rem;font-weight:500;margin-top:4px;color:#991B1B;">'
+            f'Execution halted. No placeholder or cached images are displayed.</div>'
+            f'</div>'
+        )
+        yield (make_pipeline_html(), error_banner, None, None, None, make_blip_ring_html(), None, None, None, "")
+        return
+
     # ── Step 2: Frame Generation ─────────────────────────────────────────
     yield (make_pipeline_html(2, {0, 1}),
-           f"🖼️ **Generating {len(shots)} visual frames (seed={seed})...**",
-           storyboard_data, None, None, make_blip_ring_html(), None, None, None)
+           f"🖼️ **Generating {len(shots)} frames (seed={seed}, strength={img2img_strength})...**",
+           storyboard_data, None, None, make_blip_ring_html(), None, None, None, "")
 
     t0 = time.time()
-    frames, gen_methods = generate_storyboard_frames(
-        shots=shots, seed=int(seed), mode=image_mode,
-        hf_token=hf_token_override.strip() if hf_token_override else None,
-        progress_callback=lambda p, msg: progress(0.35 + p * 0.30, desc=msg),
-    )
+    try:
+        frames, gen_methods = generate_storyboard_frames(
+            shots=shots, seed=int(seed), mode=image_mode, strength=float(img2img_strength),
+            hf_token=hf_token_override.strip() if hf_token_override else None,
+            progress_callback=lambda p, msg: progress(0.35 + p * 0.30, desc=msg),
+        )
+    except Exception as img_err:
+        error_banner = (
+            f'<div style="background-color:#FEE2E2;border:2px solid #EF4444;color:#991B1B;'
+            f'padding:16px 20px;border-radius:14px;font-weight:600;margin-bottom:16px;'
+            f'box-shadow:0 2px 8px rgba(239,68,68,0.15);">'
+            f'<div style="font-size:1.1rem;display:flex;align-items:center;gap:8px;">'
+            f'❌ <span>Image Generation Model Failed</span></div>'
+            f'<div style="font-size:0.9rem;font-weight:400;margin-top:6px;color:#7F1D1D;">'
+            f'<strong>Error:</strong> {str(img_err)}</div>'
+            f'<div style="font-size:0.82rem;font-weight:500;margin-top:4px;color:#991B1B;">'
+            f'Execution halted. No placeholder or cached images are displayed.</div>'
+            f'</div>'
+        )
+        yield (make_pipeline_html(), error_banner, storyboard_data, None, None, make_blip_ring_html(), None, None, None, "")
+        return
     t_frames = time.time() - t0
+
+    gallery_items = [(f, f"SHOT {i+1}: {shots[i].get('caption', '')}") for i, f in enumerate(frames)]
+    proof_html = make_storyboard_proof_html(shots, gen_methods)
 
     # Show frames immediately while video renders
     yield (make_pipeline_html(3, {0, 1, 2}),
            "🎬 **Rendering cross-fade transitions and merging music...**",
-           storyboard_data, frames, None, make_blip_ring_html(), None, None, None)
+           storyboard_data, gallery_items, None, make_blip_ring_html(), None, None, None, proof_html)
 
     # ── Step 3: Video ────────────────────────────────────────────────────
     t0 = time.time()
@@ -205,8 +288,8 @@ def _run_pipeline_generator(
     # ── Step 4: BLIP Quality Check ───────────────────────────────────────
     yield (make_pipeline_html(4, {0, 1, 2, 3}),
            "🔍 **Running BLIP multimodal quality verification...**",
-           storyboard_data, frames, None, make_blip_ring_html(),
-           gif_path, mp4_path, music_path)
+           storyboard_data, gallery_items, None, make_blip_ring_html(),
+           gif_path, mp4_path, music_path, proof_html)
 
     t0 = time.time()
     eval_df, avg_score, eval_details = evaluate_storyboard_frames(
@@ -219,31 +302,17 @@ def _run_pipeline_generator(
     mismatch_count = sum(1 for d in eval_details if d.get("is_mismatch"))
     engine = gen_methods[0] if gen_methods else "Local sd-turbo"
 
-    if is_fallback:
-        warning_banner = (
-            f'<div style="background-color:#FEE2E2;border:2px solid #EF4444;color:#991B1B;'
-            f'padding:14px 18px;border-radius:14px;font-weight:600;margin-bottom:16px;'
-            f'box-shadow:0 2px 8px rgba(239,68,68,0.12);">'
-            f'<div style="font-size:1.05rem;display:flex;align-items:center;gap:8px;">'
-            f'⚠️ <span>Gemini failed, using offline fallback. Results are NOT based on your idea</span></div>'
-            f'<div style="font-size:0.85rem;font-weight:400;margin-top:6px;color:#7F1D1D;">'
-            f'<strong>Error details:</strong> {fallback_reason}</div>'
-            f'</div>'
-        )
-    else:
-        warning_banner = (
-            f'<div style="background-color:#ECFDF5;border:1.5px solid #10B981;color:#065F46;'
-            f'padding:10px 16px;border-radius:12px;font-size:0.9rem;font-weight:600;margin-bottom:14px;'
-            f'display:flex;align-items:center;gap:8px;">'
-            f'✓ <span>Live Gemini LLM (<code>{llm_model}</code>) &amp; {engine} active</span>'
-            f'</div>'
-        )
-
     summary = (
-        f"{warning_banner}\n\n"
+        f'<div style="background-color:#ECFDF5;border:1.5px solid #10B981;color:#065F46;'
+        f'padding:10px 16px;border-radius:12px;font-size:0.9rem;font-weight:600;margin-bottom:14px;'
+        f'display:flex;align-items:center;gap:8px;">'
+        f'✓ <span>Live Gemini (<code>{llm_model}</code>) &amp; {engine} active</span>'
+        f'</div>\n\n'
         f"### 🎉 Storyboard Generated Successfully!\n"
         f"- **LLM Storyboard**: `{llm_model}` ({t_llm:.2f}s) &nbsp;·&nbsp; **Technique**: `{technique}`\n"
-        f"- **Image Engine**: `{engine}` ({t_frames:.2f}s) &nbsp;·&nbsp; **Seed**: `{seed}` (Frames seeded `{seed}+1`–`{seed}+6`)\n"
+        f"- **Image Engine**: `{engine}` ({t_frames:.2f}s) &nbsp;·&nbsp; **Base Seed**: `{seed}` &nbsp;·&nbsp; **Img2Img Strength**: `{img2img_strength}`\n"
+        f"- **Character Anchor**: *\"{storyboard_data.get('character_anchor', '')}\"*\n"
+        f"- **Setting Anchor**: *\"{storyboard_data.get('setting_anchor', '')}\"*\n"
         f"- **Video & Audio**: Cross-fade Transitions + Synthesized Audio ({t_video:.2f}s)\n"
         f"- **BLIP Quality**: Avg `{avg_score:.3f}` &nbsp;·&nbsp; `{mismatch_count}` potential mismatch flag(s) ({t_quality:.2f}s)\n"
         f"- **Run Artifacts**: Saved to `{run_dir}` &nbsp;·&nbsp; **Total Pipeline Time**: `{t_total:.2f}s`\n"
@@ -254,12 +323,13 @@ def _run_pipeline_generator(
         make_pipeline_html(-1, {0, 1, 2, 3, 4}),
         summary,
         storyboard_data,
-        frames,
+        gallery_items,
         eval_df,
         make_blip_ring_html(avg_score),
         gif_path,
         mp4_path,
         music_path,
+        proof_html,
     )
 
 
@@ -847,26 +917,32 @@ def build_app():
                                 info="Few-shot: in-context shot-list examples · Zero-shot: direct instructions",
                             )
                             seed_input = gr.Number(
-                                label="Fixed Seed (Reproducibility)",
+                                label="Fixed Base Seed (Reproducibility)",
                                 value=42, precision=0, step=1,
+                            )
+                        with gr.Row():
+                            img2img_strength_slider = gr.Slider(
+                                minimum=0.30, maximum=0.90,
+                                value=0.60, step=0.05,
+                                label="Img2Img Consistency Strength (Shots 2–6)",
+                                info="0.55–0.65 preserves character identity and setting while smoothly transitioning actions.",
+                            )
+                            mismatch_threshold_slider = gr.Slider(
+                                minimum=0.10, maximum=0.70,
+                                value=DEFAULT_MISMATCH_THRESHOLD, step=0.05,
+                                label="Mismatch Detection Cutoff (Cosine Similarity)",
                             )
                         style_prefix_input = gr.Textbox(
                             label="Shared Artistic Style Prefix (prepended to each image prompt)",
                             value=DEFAULT_STYLE_PREFIX,
                             lines=2,
                         )
-                        with gr.Row():
-                            mismatch_threshold_slider = gr.Slider(
-                                minimum=0.10, maximum=0.70,
-                                value=DEFAULT_MISMATCH_THRESHOLD, step=0.05,
-                                label="Mismatch Detection Cutoff (Cosine Similarity)",
-                            )
-                            image_mode_select = gr.Dropdown(
-                                choices=["auto", "local_diffusers", "hf_api", "mock"],
-                                value="auto",
-                                label="Image Engine Mode",
-                                info="'auto' tries local GPU, then HF API, then canvas fallback.",
-                            )
+                        image_mode_select = gr.Dropdown(
+                            choices=["auto", "local_diffusers", "hf_api", "mock"],
+                            value="auto",
+                            label="Image Engine Mode",
+                            info="'auto' runs local sd-turbo T2I (Shot 1) + Img2Img (Shots 2–6).",
+                        )
 
                     # Generate button (Solid black pill)
                     with gr.Column(elem_classes=["cc-gen-btn"]):
@@ -926,6 +1002,10 @@ def build_app():
                             label="Storyboard Frames (AI-labelled)",
                             columns=3, rows=2, height=340,
                             object_fit="contain",
+                        )
+                        storyboard_proof_html = gr.HTML(
+                            '<div style="font-size:0.85rem;color:#6B7280;padding:8px 0;">'
+                            'Generated frames, captions, MD5 hashes and verified prompts will appear here.</div>'
                         )
 
                     # Card 3 · Quality check
@@ -1104,6 +1184,7 @@ In Generative AI pipelines, text-to-image models can suffer from **object omissi
                 user_idea_input,
                 technique_radio,
                 seed_input,
+                img2img_strength_slider,
                 style_prefix_input,
                 mismatch_threshold_slider,
                 image_mode_select,
@@ -1120,6 +1201,7 @@ In Generative AI pipelines, text-to-image models can suffer from **object omissi
                 gif_image,
                 video_player,
                 audio_player,
+                storyboard_proof_html,
             ],
         )
 

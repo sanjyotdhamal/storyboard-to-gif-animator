@@ -249,15 +249,15 @@ def create_storyboard_media(
     Returns:
         Tuple of (gif_path, mp4_path, music_path, output_dir)
     """
+    run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if output_dir is None:
-        run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir = os.path.join(OUTPUTS_DIR, f"run_{run_timestamp}")
     os.makedirs(output_dir, exist_ok=True)
 
-    # Save individual frames to the run directory
+    # Save individual frames to the run directory with both standard and timestamped unique names
     for idx, frame in enumerate(frames, 1):
-        frame_path = os.path.join(output_dir, f"frame_{idx}.png")
-        frame.save(frame_path, "PNG")
+        frame.save(os.path.join(output_dir, f"frame_{idx}.png"), "PNG")
+        frame.save(os.path.join(output_dir, f"frame_{idx}_{run_timestamp}.png"), "PNG")
 
     if progress_callback:
         progress_callback(0.1, "Building cross-fade transition sequence...")
@@ -270,14 +270,24 @@ def create_storyboard_media(
 
     if progress_callback:
         progress_callback(0.4, "Exporting animated GIF (no caching)...")
-    gif_path = os.path.join(output_dir, "storyboard.gif")
+    gif_path = os.path.join(output_dir, f"storyboard_{run_timestamp}.gif")
     export_animated_gif(seq, output_path=gif_path, fps=fps_gif)
+    # Also save standard name for scripting convenience
+    try:
+        import shutil
+        shutil.copyfile(gif_path, os.path.join(output_dir, "storyboard.gif"))
+    except Exception:
+        pass
 
     if progress_callback:
         progress_callback(0.7, "Multiplexing audio into fresh MP4 video...")
     music_path = get_background_music_path()
-    mp4_path = os.path.join(output_dir, "storyboard.mp4")
+    mp4_path = os.path.join(output_dir, f"storyboard_{run_timestamp}.mp4")
     export_mp4_with_audio(seq, output_path=mp4_path, audio_path=music_path, fps=fps_video)
+    try:
+        shutil.copyfile(mp4_path, os.path.join(output_dir, "storyboard.mp4"))
+    except Exception:
+        pass
 
     if progress_callback:
         progress_callback(1.0, f"Fresh media assembled in: {output_dir}")
