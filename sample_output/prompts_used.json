@@ -5,39 +5,69 @@
   "shots": [
     {
       "shot_number": 1,
-      "camera": "Wide Establishing Shot",
-      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, wide establishing shot of A small lonely robot in a greenhouse learns to paint flowers, setting the peaceful world, cinematic environment, with rich cinematic framing and character nuance",
-      "caption": "Introduction: The story begins with A small lonely robot in a greenhouse learns to paint flowers in its original setting."
+      "camera": "Wide establishing cinematic shot",
+      "action": "wandering quietly along a mossy flagstone path, looking up in wonder at hanging ivy",
+      "emotion": "solitary and curious",
+      "caption": "In an abandoned sunlit greenhouse, the small brass robot lived a quiet, solitary life.",
+      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses, an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams, Wide establishing cinematic shot, wandering quietly along a mossy flagstone path, looking up in wonder at hanging ivy, solitary and curious",
+      "character_anchor": "a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses",
+      "setting_anchor": "an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams",
+      "md5_hash": "fb7ea657fc7b97cc4a87b04f66b53115"
     },
     {
       "shot_number": 2,
-      "camera": "Medium Discovery Shot",
-      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, medium shot focusing on the main character discovering an intriguing mystery related to A small lonely robot in a greenhouse learns to paint flowers, expressive eyes, with rich cinematic framing and character nuance",
-      "caption": "Inciting Incident: An unexpected discovery sparks a journey of transformation."
+      "camera": "Medium discovery shot",
+      "action": "discovering an old wooden painter's easel and dusty tubes of vivid oil paint behind flowerpots",
+      "emotion": "surprised and fascinated",
+      "caption": "One afternoon, he uncovered a forgotten artist's palette and colorful pigments.",
+      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses, an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams, Medium discovery shot, discovering an old wooden painter's easel and dusty tubes of vivid oil paint behind flowerpots, surprised and fascinated",
+      "character_anchor": "a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses",
+      "setting_anchor": "an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams",
+      "md5_hash": "b73a13c7d06651835429344ed316a851"
     },
     {
       "shot_number": 3,
-      "camera": "Close-up Action Shot",
-      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, close-up dynamic shot of the first attempt and challenge during A small lonely robot in a greenhouse learns to paint flowers, detailed textures and vibrant lighting, with rich cinematic framing and character nuance",
-      "caption": "Rising Action: Working through the initial challenge with steady determination."
+      "camera": "Close-up macro shot",
+      "action": "gently gripping a wooden paintbrush and dabbing bright turquoise paint onto a canvas",
+      "emotion": "focused and hesitant",
+      "caption": "With gentle gears turning, he placed the first hesitant stroke on the canvas.",
+      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses, an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams, Close-up macro shot, gently gripping a wooden paintbrush and dabbing bright turquoise paint onto a canvas, focused and hesitant",
+      "character_anchor": "a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses",
+      "setting_anchor": "an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams",
+      "md5_hash": "2114b3e74101c15aaccdd7be8a9bbb47"
     },
     {
       "shot_number": 4,
-      "camera": "Low-angle Dramatic Shot",
-      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, low angle dramatic perspective of the turning point in A small lonely robot in a greenhouse learns to paint flowers, emotional intensity, dynamic color contrast, with rich cinematic framing and character nuance",
-      "caption": "Turning Point: A breakthrough moment where effort and inspiration collide."
+      "camera": "Low angle dramatic shot",
+      "action": "mixing swirls of vibrant yellow and crimson paint, surrounded by color-splattered sketches",
+      "emotion": "intense and determined",
+      "caption": "Colors swirled as the robot studied the delicate curves and petals of blooming orchids.",
+      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses, an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams, Low angle dramatic shot, mixing swirls of vibrant yellow and crimson paint, surrounded by color-splattered sketches, intense and determined",
+      "character_anchor": "a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses",
+      "setting_anchor": "an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams",
+      "md5_hash": "e81929e82cdf6978e9e339d86a50cb90"
     },
     {
       "shot_number": 5,
-      "camera": "Climactic High-Energy Shot",
-      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, climactic scene reaching peak realization in A small lonely robot in a greenhouse learns to paint flowers, sparkling particles, radiant visual spectacle, with rich cinematic framing and character nuance",
-      "caption": "Climax: The ultimate achievement unfolds in full splendor."
+      "camera": "Three-quarter cinematic shot",
+      "action": "stepping back proudly to admire a glowing finished canvas of radiant sunflowers",
+      "emotion": "triumphant and amazed",
+      "caption": "Before him stood a luminous masterpiece, glowing like real morning light.",
+      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses, an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams, Three-quarter cinematic shot, stepping back proudly to admire a glowing finished canvas of radiant sunflowers, triumphant and amazed",
+      "character_anchor": "a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses",
+      "setting_anchor": "an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams",
+      "md5_hash": "b7f500ce53fd29fa3ef838e7b9bcae61"
     },
     {
       "shot_number": 6,
-      "camera": "Wide Heartwarming Shot",
-      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, wide heartwarming resolution shot concluding A small lonely robot in a greenhouse learns to paint flowers, golden hour light, sense of fulfillment, with rich cinematic framing and character nuance",
-      "caption": "Resolution: A peaceful celebration of the completed journey."
+      "camera": "Wide heartwarming resolution shot",
+      "action": "sitting peacefully as small garden butterflies flutter around his vibrant floral gallery",
+      "emotion": "joyful and fulfilled",
+      "caption": "The quiet greenhouse had transformed into a sanctuary of life and art.",
+      "image_prompt": "digital storybook illustration, vibrant cinematic lighting, soft warm palette, expressive character design, sharp focus, consistent visual art style, a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses, an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams, Wide heartwarming resolution shot, sitting peacefully as small garden butterflies flutter around his vibrant floral gallery, joyful and fulfilled",
+      "character_anchor": "a small lonely round brass robot with weathered bronze joints and glowing cyan glass lenses",
+      "setting_anchor": "an overgrown Victorian glasshouse conservatory filled with lush green ferns and warm sunbeams",
+      "md5_hash": "a2e5b742ae56f4cc17df57beb8bcd69c"
     }
   ]
 }

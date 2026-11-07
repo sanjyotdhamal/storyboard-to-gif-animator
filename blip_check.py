@@ -39,7 +39,10 @@ def _load_similarity_model():
 
     from sentence_transformers import SentenceTransformer
     print("Loading sentence-transformers/all-MiniLM-L6-v2...")
-    _SIMILARITY_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+    try:
+        _SIMILARITY_MODEL = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", local_files_only=True)
+    except Exception:
+        _SIMILARITY_MODEL = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
     return _SIMILARITY_MODEL
 
 

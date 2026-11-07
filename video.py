@@ -276,6 +276,7 @@ def create_storyboard_media(
     try:
         import shutil
         shutil.copyfile(gif_path, os.path.join(output_dir, "storyboard.gif"))
+        shutil.copyfile(gif_path, os.path.join(OUTPUTS_DIR, "storyboard.gif"))
     except Exception:
         pass
 
@@ -286,6 +287,7 @@ def create_storyboard_media(
     export_mp4_with_audio(seq, output_path=mp4_path, audio_path=music_path, fps=fps_video)
     try:
         shutil.copyfile(mp4_path, os.path.join(output_dir, "storyboard.mp4"))
+        shutil.copyfile(mp4_path, os.path.join(OUTPUTS_DIR, "storyboard.mp4"))
     except Exception:
         pass
 

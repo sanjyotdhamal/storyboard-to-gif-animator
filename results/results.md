@@ -17,16 +17,16 @@ This experiment measures the impact of prompt engineering techniques (**Zero-Sho
 
 | ID | Concept | Zero-Shot Avg BLIP Score | Few-Shot Avg BLIP Score | Delta (Δ) | % Improvement | Zero-Shot Mismatches | Few-Shot Mismatches |
 | :-: | :--- | :-: | :-: | :-: | :-: | :-: | :-: |
-| **1** | A small lonely robot in a greenhouse learns to paint flowers | `0.2079` | `0.2302` | **`+0.0223`** | **`+10.7%`** | 6 | 6 |
-| **2** | A timid sea turtle discovers a glowing celestial star in a spiral shell | `0.2347` | `0.2544` | **`+0.0197`** | **`+8.4%`** | 6 | 6 |
-| **3** | An old clockmaker invents a mechanical hummingbird that takes flight | `0.2635` | `0.2794` | **`+0.0159`** | **`+6.0%`** | 6 | 6 |
-| **4** | A whimsical cat baker accidentally creates a flying croissant balloon | `0.2020` | `0.2246` | **`+0.0226`** | **`+11.2%`** | 6 | 6 |
-| **5** | A young botanist cultivates a giant glowing bioluminescent mushroom tree | `0.2298` | `0.2527` | **`+0.0229`** | **`+10.0%`** | 6 | 6 |
+| **1** | A small lonely robot in a greenhouse learns to paint flowers | `0.3920` | `0.4506` | **`+0.0586`** | **`+14.9%`** | 1 | 0 |
+| **2** | A timid sea turtle discovers a glowing celestial star in a spiral shell | `0.3275` | `0.3544` | **`+0.0269`** | **`+8.2%`** | 6 | 2 |
+| **3** | An old clockmaker invents a mechanical hummingbird that takes flight | `0.2562` | `0.3426` | **`+0.0864`** | **`+33.7%`** | 6 | 4 |
+| **4** | A whimsical cat baker accidentally creates a flying croissant balloon | `0.3244` | `0.4054` | **`+0.0810`** | **`+25.0%`** | 5 | 0 |
+| **5** | A young botanist cultivates a giant glowing bioluminescent mushroom tree | `0.2940` | `0.3410` | **`+0.0470`** | **`+16.0%`** | 6 | 4 |
 
 ### Overall Aggregate Metrics
-- **Mean Zero-Shot Score**: `0.2276`
-- **Mean Few-Shot Score**: `0.2483`
-- **Net Average Gain**: **`+0.0207`** (`+9.09%` relative increase)
+- **Mean Zero-Shot Score**: `0.3188`
+- **Mean Few-Shot Score**: `0.3788`
+- **Net Average Gain**: **`+0.0600`** (`+18.81%` relative increase)
 
 ---
 

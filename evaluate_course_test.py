@@ -12,6 +12,10 @@ Executes the required Responsible AI Course Benchmark:
 """
 
 import os
+# Prevent sentence-transformers from hanging on HF hub fetches when models are cached locally
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
 import json
 import time
 import pandas as pd
@@ -221,26 +225,24 @@ def generate_sample_output():
         frame_file = os.path.join(SAMPLE_OUTPUT_DIR, f"frame_{i}.png")
         frame.save(frame_file)
 
-    # Save GIF and MP4
-    gif_file = os.path.join(SAMPLE_OUTPUT_DIR, "storyboard.gif")
-    mp4_file = os.path.join(SAMPLE_OUTPUT_DIR, "storyboard.mp4")
-
-    create_storyboard_media(
+    # Save GIF and MP4 directly into sample_output/
+    gif_path, mp4_path, music_path, run_dir = create_storyboard_media(
         frames=frames,
         fps_video=24,
         fps_gif=15,
         hold_frames=20,
-        transition_frames=10
+        transition_frames=10,
+        output_dir=SAMPLE_OUTPUT_DIR
     )
 
-    # Copy output files to sample_output
+    # Copy the timestamped files to standard names in sample_output/
     import shutil
-    src_gif = os.path.join(os.path.dirname(__file__), "outputs", "storyboard.gif")
-    src_mp4 = os.path.join(os.path.dirname(__file__), "outputs", "storyboard.mp4")
-    if os.path.exists(src_gif):
-        shutil.copy2(src_gif, gif_file)
-    if os.path.exists(src_mp4):
-        shutil.copy2(src_mp4, mp4_file)
+    gif_file = os.path.join(SAMPLE_OUTPUT_DIR, "storyboard.gif")
+    mp4_file = os.path.join(SAMPLE_OUTPUT_DIR, "storyboard.mp4")
+    if os.path.exists(gif_path) and gif_path != gif_file:
+        shutil.copy2(gif_path, gif_file)
+    if os.path.exists(mp4_path) and mp4_path != mp4_file:
+        shutil.copy2(mp4_path, mp4_file)
 
     # Save exact prompts used
     prompts_meta = {
