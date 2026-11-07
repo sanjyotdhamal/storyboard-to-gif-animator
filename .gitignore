@@ -21,9 +21,11 @@ checkpoints/
 
 # Temporary generated artifacts
 temp/
-outputs/
+outputs/*
+!outputs/storyboard.gif
 *.mp4
 *.gif
+!outputs/storyboard.gif
 !sample_output/*.mp4
 !sample_output/*.gif
 !assets/*.mp3
