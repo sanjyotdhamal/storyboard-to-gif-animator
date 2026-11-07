@@ -37,7 +37,7 @@ Planning an animation usually starts with a **storyboard**: a row of pictures th
 
 This app does it for you. You type a short idea, for example:
 
-> *"A small lonely robot in a greenhouse learns to paint flowers"*
+> *"A rowing team trains at sunrise on a calm lake"*
 
 and the app gives you:
 
@@ -51,11 +51,11 @@ and the app gives you:
 
 ## 🎥 Demo
 
-**Sample output** (idea: *a small lonely robot in a greenhouse learns to paint flowers*):
+**Sample output** (idea: *A rowing team trains at sunrise on a calm lake*):
 
 <div align="center">
 
-<img src="sample_output/storyboard.gif" alt="Sample 6-shot animated storyboard" width="480"/>
+<img src="outputs/storyboard.gif" alt="Sample 6-shot animated storyboard" width="480"/>
 
 </div>
 
@@ -68,7 +68,7 @@ and the app gives you:
   </tr>
 </table>
 
-🔗 **Live app:** [Open on Hugging Face Spaces](https://huggingface.co/spaces/YOUR-USERNAME/storyboard-to-gif-animator)
+🔗 **Live app:** (https://e3d549c7272843b2fb.gradio.live)
 
 ---
 
@@ -200,7 +200,7 @@ MISMATCH_THRESHOLD=0.35
 python app.py
 ```
 
-Open **http://127.0.0.1:7860** in your browser, type an idea (or click a preset) and press **Generate**.
+Open **https://e3d549c7272843b2fb.gradio.live** in your browser, type an idea (or click a preset) and press **Generate**.
 
 > ⏱️ On a computer without a GPU, making 6 pictures can take several minutes. For faster results set `IMAGE_GEN_MODE=hf_api` to use Hugging Face's servers.
 
